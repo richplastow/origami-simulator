@@ -1,0 +1,37 @@
+/*
+ * The page follows the operating system's light or dark mode through
+ * `color-scheme` and the system colours `Canvas` and `CanvasText`, so it
+ * needs no media query.
+ */
+
+:root {
+  /* Lighter red in light mode, darker red in dark mode. */
+  --triangle-color: light-dark(#ff6666, #990000);
+
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  background-color: Canvas;
+  color: CanvasText;
+}
+
+/*
+ * The WebGL canvas stays transparent and fills the viewport behind the page.
+ * Its `color` is never drawn by the browser: src/main.js reads it as the
+ * triangle's colour, so the colour has one source of truth, here in CSS.
+ */
+.scene {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--triangle-color);
+}
+
+/* Positioned, and later in the document, so it paints over the canvas. */
+h1 {
+  position: relative;
+}

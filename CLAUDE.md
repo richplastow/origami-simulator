@@ -59,8 +59,8 @@ references for intent and history, but they drift.
   instead of carrying its error into new work.
 - **The same goes for Three.js.** Its API changes from release to release,
   and tutorials, answers and training data often describe an older one.
-  Check a class or method against the vendored copy's source before using
-  it, never against memory.
+  Check a class or method against the pinned release's unminified source
+  before using it, never against memory (see [Three.js](#threejs)).
 
 ## The stack, and the rules it implies
 
@@ -83,10 +83,10 @@ references for intent and history, but they drift.
 
 ### Three.js
 
-- One pinned Three.js release is vendored at `vendor/three/`: its `build/`
-  and `examples/jsm/` folders, copied unchanged, beside its `LICENSE`, with
-  the version number and where it came from recorded in
-  `vendor/three/README.md`. `index.html` maps it:
+- One pinned Three.js release is vendored at `vendor/three/`: the two
+  files the page loads, `build/three.module.js` and `build/three.core.js`,
+  beside the release's `LICENSE`, with the version, sources and checksums
+  recorded in `vendor/three/README.md`. `index.html` maps it:
 
   ```html
   <script type="importmap">
@@ -99,12 +99,46 @@ references for intent and history, but they drift.
   </script>
   ```
 
-- Never edit a vendored file. An upgrade is a deliberate step: replace the
-  folder whole, read the
-  [migration guide](https://github.com/mrdoob/three.js/wiki/Migration-Guide)
-  for every release skipped, and fix what broke
+- **Ruling: vendor minified files, downloaded once from jsDelivr.** Since
+  r186, Three.js ships no minified builds
+  ([PR #33893](https://github.com/mrdoob/three.js/pull/33893)), and its
+  unminified files are over twice the download. Every vendored Three.js
+  file, addons included, is therefore the minified copy that jsDelivr
+  generates with Terser, fetched from
+  `https://cdn.jsdelivr.net/npm/three@<version>/<path>.min.js` and stored
+  in this repo. The app itself never loads anything from jsDelivr or any
+  other CDN
+  - Store each file under the release's original name, without `.min`:
+    minified files still import one another by their original names, such
+    as `./three.core.js`
+  - Delete each file's final `//# sourceMappingURL=/sm/….map` line, which
+    points at jsDelivr's server and would make browser dev tools log a
+    failed request. Change nothing else
+  - Record each file's SHA-256 as downloaded and as stored in
+    `vendor/three/README.md`
+- **Ruling: vendor only the files that code loads.** `build/` holds only
+  `three.module.js` and `three.core.js`, not the release's WebGPU builds.
+  Three.js ships its addons (controls, loaders, exporters and so on) in
+  `examples/jsm/`, about 10 MB of code this app would mostly never run, so
+  that folder is not vendored whole. When code first imports an addon,
+  fetch that file, as the ruling above sets out, from the same release to
+  the same path under `vendor/three/examples/jsm/`, together with every
+  file it imports by relative path (such as
+  `../utils/BufferGeometryUtils.js`), and list them in
+  `vendor/three/README.md`. When the last import of an addon goes, delete
+  its files and their entries. The `three/addons/` mapping stays in the
+  import map even while no addon is vendored
 - Addons under `three/addons/` count as part of Three.js, not as new
   dependencies
+- Never edit a vendored file, beyond deleting its source-map line when it
+  is fetched. An upgrade is a deliberate step: fetch both build files and
+  each listed addon afresh for the new version, replace `LICENSE` from the
+  new release, update `vendor/three/README.md`, read the
+  [migration guide](https://github.com/mrdoob/three.js/wiki/Migration-Guide)
+  for every release skipped, and fix what broke
+- The vendored files are minified, so read the pinned release's unminified
+  source to check an API: `https://github.com/mrdoob/three.js/tree/r<N>/src`,
+  or the npm tarball that `vendor/three/README.md` names
 - One renderer and one animation loop, driven by
   `renderer.setAnimationLoop()`
 - Motion is frame-rate independent: it scales with the time elapsed since
@@ -256,7 +290,7 @@ changed, or to "we", "you" or "I".
   GitHub issues, MDN, Stack Overflow. Many issues are known bugs or
   documented breaking changes; don't guess.
 - **Verify before asserting.** Anything checkable in seconds, such as a
-  method's signature in the vendored source or what a browser API returns,
+  method's signature in the Three.js source or what a browser API returns,
   is checked before it goes into code, a plan or a doc. Say which claims
   were verified, which came from reference material, and which are
   inferred.

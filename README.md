@@ -7,3 +7,14 @@ Create classic origami animals in a virtual world
 - author: Rich Plastow
 - repository: <https://github.com/richplastow/origami-simulator>
 - homepage: <https://richplastow.com/origami-simulator/>
+
+## Usage
+
+To run `index.html` locally, you'll need to use a web server:
+
+```bash
+open http://localhost:1111
+npx serve docs -p 1111
+```
+
+Use `ctrl+C` to stop the server.

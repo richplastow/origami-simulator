@@ -1,11 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Origami Simulator</title>
-</head>
-<body>
+    <link
+      rel="icon"
+      type="image/png"
+      href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFElEQVR42mNoIBEwjGoY1TB8NQAAJYSAELxv8c8AAAAASUVORK5CYII="
+    />
+    <link rel="stylesheet" href="styles/main.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/build/three.module.js",
+          "three/addons/": "./vendor/three/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="src/main.js"></script>
+  </head>
+  <body>
+    <canvas
+      class="scene"
+      role="img"
+      aria-label="A red triangle, slowly rotating"
+    ></canvas>
     <h1>Origami Simulator</h1>
-</body>
+  </body>
 </html>
