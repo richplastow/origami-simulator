@@ -1,0 +1,36 @@
+/* Reduce all text to 85% of its default size, to follow Claude Code sidebar.
+ * The markdown-preview-github-styles extension fixes `.github-markdown-body`
+ * at 16px, which stops a size set on `body` from reaching the text. Headings,
+ * code and tables are sized in em or % below it, so they scale in proportion. */
+body .github-markdown-body {
+  font-size: calc(16px * 0.85);
+}
+
+/* Tone down bright text in dark mode. */
+body.vscode-dark h1,
+body.vscode-dark h2,
+body.vscode-dark h3,
+body.vscode-dark h4,
+body.vscode-dark h5,
+body.vscode-dark h6,
+body.vscode-dark li,
+body.vscode-dark p,
+body.vscode-dark td {
+  color: #d3d3d3 !important;
+}
+body.vscode-dark em,
+body.vscode-dark strong,
+body.vscode-dark th {
+  color: #eeeeee !important;
+}
+body.vscode-dark code {
+  color: #ce9178 !important;
+}
+
+/* Darken the preview background. The markdown-preview-github-styles extension
+ * wraps the rendered markdown in `.github-markdown-body` and paints it, so
+ * setting the background on `body` alone has no visible effect. */
+body.vscode-dark .github-markdown-body,
+body.vscode-dark tr {
+  background-color: #222222 !important;
+}

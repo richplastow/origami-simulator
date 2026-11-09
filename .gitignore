@@ -1,2 +1,11 @@
+# Operating systems
 .DS_Store
-node_modules/
+Thumbs.db
+
+# Editors and agents
+.claude/settings.local.json
+.idea/
+*.swp
+
+# Logs
+*.log
