@@ -1,20 +1,40 @@
 /**
  * @fileoverview
- * Entry point: draws a slowly rotating triangle on a transparent canvas.
+ * Entry point: draws a lit square sheet of paper on a transparent canvas,
+ * and folds it towards the fold that the buttons choose.
  */
 
-import { PerspectiveCamera, Scene, Timer, WebGLRenderer } from "three";
-import { distanceToFitCircle } from "./camera/fit.js";
-import { createTriangle, TRIANGLE_RADIUS_METERS } from "./scene/triangle.js";
+import {
+  MathUtils,
+  PerspectiveCamera,
+  Scene,
+  Timer,
+  WebGLRenderer,
+} from "three";
+import { distanceToFitSphere } from "./camera/fit.js";
+import { stepFold } from "./fold/animation.js";
+import {
+  createCreasePattern,
+  PAPER_SIZE_METERS,
+} from "./paper/crease-pattern.js";
+import { createLights } from "./scene/lights.js";
+import { createPaper } from "./scene/paper.js";
+import { connectFoldButtons } from "./ui/fold-buttons.js";
 
-const CAMERA_FAR_METERS = 100;
-const CAMERA_FOV_DEGREES = 50; // vertical; PerspectiveCamera takes degrees
-const CAMERA_NEAR_METERS = 0.1;
-const DARK_SCHEME_QUERY = "(prefers-color-scheme: dark)";
+// Raised above the horizontal XZ plane, turned from +Z towards +Y.
+const CAMERA_ELEVATION_RADIANS = MathUtils.degToRad(20);
+const CAMERA_FAR_METERS = 10;
+const CAMERA_FOV_DEGREES = 30; // vertical; PerspectiveCamera takes degrees
+const CAMERA_NEAR_METERS = 0.01;
+const FRAME_MARGIN = 1.1; // leaves room around the paper for the buttons
 const MAX_PIXEL_RATIO = 2; // caps GPU cost on high-density screens
-const ROTATION_RADIANS_PER_SECOND = 0.4;
 
 const canvas = document.querySelector(".scene");
+const pattern = createCreasePattern(PAPER_SIZE_METERS);
+
+// Every crease passes through the centre, so folding never moves the paper
+// outside the sphere that holds it flat.
+const paperRadiusMeters = pattern.sizeMeters * Math.SQRT1_2;
 
 // An `alpha` canvas clears to transparent, so the page shows through.
 const renderer = new WebGLRenderer({ alpha: true, antialias: true, canvas });
@@ -26,11 +46,17 @@ const camera = new PerspectiveCamera(
   CAMERA_FAR_METERS,
 );
 const timer = new Timer();
-const triangle = createTriangle();
+const paper = createPaper(pattern);
 
-scene.add(triangle);
+// The paper starts flat, and stays there until a button sets a target.
+const foldState = { angleRadians: 0, creaseId: null };
+const foldTarget = { angleRadians: 0, creaseId: null };
+
+scene.add(paper.group, ...createLights());
 
 /** #### Matches the camera and drawing buffer to the canvas's CSS size
+ * - The camera keeps its elevation and moves along its line of sight, so
+ *   the paper's bounding sphere fills the view's smaller dimension.
  * @param width The canvas's width, in CSS pixels.
  * @param height The canvas's height, in CSS pixels.
  */
@@ -38,11 +64,15 @@ const resize = (width, height) => {
   if (width === 0 || height === 0) return; // hidden, nothing to fit
 
   camera.aspect = width / height;
-  camera.position.z = distanceToFitCircle(
-    camera.aspect,
-    camera.fov,
-    TRIANGLE_RADIUS_METERS,
+  const distanceMeters =
+    FRAME_MARGIN *
+    distanceToFitSphere(camera.aspect, camera.fov, paperRadiusMeters);
+  camera.position.set(
+    0,
+    distanceMeters * Math.sin(CAMERA_ELEVATION_RADIANS),
+    distanceMeters * Math.cos(CAMERA_ELEVATION_RADIANS),
   );
+  camera.lookAt(0, 0, 0);
   camera.updateProjectionMatrix();
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
@@ -51,29 +81,22 @@ const resize = (width, height) => {
   renderer.setSize(width, height, false);
 };
 
-/** #### Copies the triangle's colour from the canvas's CSS `color`
- * - main.css sets that colour with `light-dark()`, which the browser
- *   resolves to an `rgb()` value for the current colour scheme.
- */
-const syncTriangleColor = () => {
-  triangle.material.color.setStyle(getComputedStyle(canvas).color);
-};
-
 resize(canvas.clientWidth, canvas.clientHeight);
 new ResizeObserver(([entry]) => {
   resize(entry.contentRect.width, entry.contentRect.height);
 }).observe(canvas);
 
-syncTriangleColor();
-window
-  .matchMedia(DARK_SCHEME_QUERY)
-  .addEventListener("change", syncTriangleColor);
+// A press mid-fold changes only the target, so the motion carries on from
+// the current angle.
+connectFoldButtons((target) => Object.assign(foldTarget, target));
 
-// Avoid a large jump in rotation when a hidden tab becomes visible again.
+// Avoid a large jump in the fold when a hidden tab becomes visible again.
 timer.connect(document);
 
 renderer.setAnimationLoop((timestampMs) => {
   timer.update(timestampMs);
-  triangle.rotation.z += ROTATION_RADIANS_PER_SECOND * timer.getDelta();
+  if (stepFold(timer.getDelta(), foldState, foldTarget)) {
+    paper.setFold(foldState);
+  }
   renderer.render(scene, camera);
 });

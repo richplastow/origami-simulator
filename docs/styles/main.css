@@ -1,12 +1,13 @@
 /*
  * The page follows the operating system's light or dark mode through
  * `color-scheme` and the system colours `Canvas` and `CanvasText`, so it
- * needs no media query.
+ * needs no media query. The paper keeps its own colours, set in
+ * src/scene/paper.js, whatever the colour scheme.
  */
 
 :root {
-  /* Lighter red in light mode, darker red in dark mode. */
-  --triangle-color: light-dark(#ff6666, #990000);
+  --fold-buttons-gap: 0.5rem; /* between neighbouring buttons */
+  --fold-buttons-offset: 1.5rem; /* from the viewport's bottom edge */
 
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
@@ -17,21 +18,27 @@ body {
   color: CanvasText;
 }
 
-/*
- * The WebGL canvas stays transparent and fills the viewport behind the page.
- * Its `color` is never drawn by the browser: src/main.js reads it as the
- * triangle's colour, so the colour has one source of truth, here in CSS.
- */
+/* The WebGL canvas stays transparent and fills the viewport behind the page. */
 .scene {
   position: fixed;
   inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  color: var(--triangle-color);
 }
 
 /* Positioned, and later in the document, so it paints over the canvas. */
 h1 {
   position: relative;
+}
+
+/* Fixed, and later in the document, so it paints over the canvas. */
+.fold-buttons {
+  position: fixed;
+  inset-inline: 0;
+  bottom: var(--fold-buttons-offset);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--fold-buttons-gap);
 }
