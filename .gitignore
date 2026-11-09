@@ -3,7 +3,8 @@
 Thumbs.db
 
 # Editors and agents
-.claude/settings.local.json
+.claude/
+CLAUDE.md
 .idea/
 *.swp
 
