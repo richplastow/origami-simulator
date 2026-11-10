@@ -11,17 +11,17 @@ type: plan
   are made towards the viewer. A third design, the watermelon slice,
   proves it: it turns over twice.
 - Implements
-  [Ruling 2](./07-design-research.md#ruling-2-turning-the-paper-over-is-an-animated-step)
+  [Ruling 2](../todo/07-design-research.md#ruling-2-turning-the-paper-over-is-an-animated-step)
   and
-  [Ruling 5](./07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)
-  of [07-design-research.md](./07-design-research.md), whose shortlist
+  [Ruling 5](../todo/07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)
+  of [07-design-research.md](../todo/07-design-research.md), whose shortlist
   holds the watermelon as design 5. At least 12 of its 22 designs turn
   over, so no more can be added without this.
-- Depends on [Plan 08](../done/08-fold-lines-both-sides.md), so that the side
+- Depends on [Plan 08](./08-fold-lines-both-sides.md), so that the side
   which comes round carries its fold lines. It extends cutSheet() in
   `docs/src/fold/engine.js`, the pose in `docs/src/fold/pose.js`, and
   createPaper() in `docs/src/scene/paper.js`. It feeds
-  [Plan 10](./10-start-the-sheet-turned.md), which adds a starting pose
+  [Plan 10](../todo/10-start-the-sheet-turned.md), which adds a starting pose
   to the same view of the paper.
 - The watermelon follows Fumiaki Shingu's diagram at
   [Origami Club](https://en.origami-club.com/easy/food/watermelon2/index.html),
@@ -30,13 +30,20 @@ type: plan
   script, kept outside the repo, which fed the current engine the
   watermelon's folds turned by hand into the front's terms. The real
   code is written afresh, to [CLAUDE.md](../../CLAUDE.md)'s standards.
-- Three.js: `Object3D.rotation` and `Group` only, as `main.js` uses
-  them now.
+- Three.js: `Object3D.rotation` and `Group` only, as `main.js` and
+  `docs/src/scene/paper.js` use them now. Checked against the
+  [r187 source](https://github.com/mrdoob/three.js/tree/r187/src) on
+  2026-11-10:
+  [Object3D.js](https://github.com/mrdoob/three.js/blob/r187/src/core/Object3D.js),
+  whose `rotation` is an Euler of default order `XYZ`, and
+  [Matrix4.js](https://github.com/mrdoob/three.js/blob/r187/src/math/Matrix4.js),
+  whose `makeRotationFromEuler()` turns by `y` alone as
+  `x' = x cos y + z sin y`, `z' = −x sin y + z cos y`.
 
 ## Definitions
 
-The terms of [Plan 02a](../done/02a-paper-dart.md#definitions) and
-[Plan 02c](../done/02c-printed-fold-lines.md#definitions) apply. Three
+The terms of [Plan 02a](./02a-paper-dart.md#definitions) and
+[Plan 02c](./02c-printed-fold-lines.md#definitions) apply. Three
 more:
 
 - **Step**: one move in a design's sequence, either a fold or a
@@ -138,7 +145,9 @@ more:
    step. `docs/src/fold/stepper.js` moves one step at a time as it
    moves one fold now, so only its comments change.
 6. **A turn-over turns the model −π radians**, eased as a fold is, so
-   its right edge swings towards the viewer, as a page turns. Every
+   its right edge swings towards the viewer, as a page turns: half-way,
+   at −π/2, `rotation.y` carries `+x` to `+z`, the side the camera sits
+   on (resize() in `main.js`). Every
    turn-over turns the same way, and unfolding plays each backwards.
    It takes a fold's time, `FOLD_SECONDS` forwards and `UNFOLD_SECONDS`
    back. Should Manual QA 3 find that wrong, a time of its own is a
@@ -207,6 +216,10 @@ more:
   model −π radians over it, eased (Agent QA 3).
 - It should throw, naming the design and the step, for an unknown
   `kind` and for `layers` that name a turn-over (Agent QA 4; inferred).
+- It should use a fold as written after an even number of turn-overs,
+  and ease each turn-over's turn (Agent QA 5).
+- It should name the step, not the fold, when a fold moves nothing, and
+  when a fold moves the faces of one that stops short (Agent QA 6).
 
 **Agent QA**
 
@@ -223,6 +236,15 @@ more:
 4. Do: `node --input-type=module -e 'import { PAPER_HAT } from "./docs/src/designs/paper-hat.js"; import { TURN_OVER } from "./docs/src/designs/steps.js"; import { cutSheet } from "./docs/src/fold/engine.js"; const [first] = PAPER_HAT.steps; for (const steps of [[{ kind: "twist" }], [first, TURN_OVER, { ...first, layers: { movedBy: 1 } }]]) { try { cutSheet({ aspect: 1, id: "odd", steps }); } catch (error) { console.log(error.message); } }'`
    Expect: `Step 0 of design "odd" has unknown kind "twist"`, then
    `Step 2 of design "odd" names step 1, which is not a fold`
+5. Do: `node --input-type=module -e 'import { PAPER_HAT } from "./docs/src/designs/paper-hat.js"; import { TURN_OVER } from "./docs/src/designs/steps.js"; import { cutSheet } from "./docs/src/fold/engine.js"; import { foldPositionAt, viewTurnRadiansAt } from "./docs/src/fold/pose.js"; const bump = (layers) => (layers === "all" ? layers : layers.heldBy === undefined ? { movedBy: layers.movedBy + 2 } : { heldBy: layers.heldBy + 2 }); const a = cutSheet(PAPER_HAT); const b = cutSheet({ ...PAPER_HAT, steps: [TURN_OVER, TURN_OVER, ...PAPER_HAT.steps.map((step) => ({ ...step, layers: bump(step.layers) }))] }); console.log(JSON.stringify([a.faces, a.creaseLines, a.centres]) === JSON.stringify([b.faces, b.creaseLines, b.centres]), [0.25, 1.25, 2.5].map((s) => foldPositionAt(s, b).toFixed(4) + " " + viewTurnRadiansAt(s, b).toFixed(4)).join(" | "));'`
+   Expect: `true 0.0000 -0.4909 | 0.0000 -3.6325 | 0.5000 -6.2832` (the
+   hat, turned over twice first and then folded as written, cuts the
+   hat's sheet; a quarter of the way through a turn-over, the turn is
+   −π × 0.15625, eased, not −π × 0.25)
+6. Do: `node --input-type=module -e 'import { createFold, TURN_OVER } from "./docs/src/designs/steps.js"; import { cutSheet } from "./docs/src/fold/engine.js"; const half = { targetRadians: Math.PI / 2 }; for (const steps of [[TURN_OVER, createFold([-0.075, 0.075], "all", [0.075, 0.075], "valley")], [TURN_OVER, createFold([-0.075, 0], "all", [0.075, 0], "valley", half), createFold([0.075, 0], "all", [-0.075, 0], "valley")]]) { try { cutSheet({ aspect: 1, id: "odd", steps }); } catch (error) { console.log(error.message); } }'`
+   Expect: `Step 1 of design "odd" moves nothing`, then
+   `Step 1 of design "odd" stops short, but step 2 moves its faces`
+   (each fold's index in `folds` is one less than its step's)
 
 ### Step 2: The watermelon, and the list of designs
 
@@ -244,7 +266,8 @@ more:
 
 - Changes `docs/src/scene/paper.js`: `turnGroup`, and
   setSequencePosition() (Decision 7). Its doc comments name the three
-  groups.
+  groups, and give setSequencePosition()'s range as 0 to the step
+  count.
 - Changes `docs/src/main.js` and `docs/src/ui/fold-buttons.js`: both
   read `DESIGNS` (Decision 9). `main.js`'s `@fileoverview` no longer
   names the designs one by one.
@@ -349,7 +372,7 @@ open beside it.
   from the back: the corners fold towards whoever sees the back.
 - Each further design adds a button to the row. The row is tidied once
   the designs are in
-  ([Ruling 5](./07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)).
+  ([Ruling 5](../todo/07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)).
 
 ## Audit
 
@@ -364,3 +387,64 @@ open beside it.
   list, and the watermelon as the proof, with its lines read off the
   diagram; split from the starting pose, now Plan 10, by the seam test;
   figures from a prototype against the current engine.
+- **2026-11-10T15:16:16Z** — **reviewed**: no major findings; Step 1
+  Agent QA 1's "before" figures re-run at `af5942f` and match; the
+  watermelon's front-terms folds re-cut in a throwaway script give the
+  prototype's 4 faces, 1 valley and 2 mountain, 0.10629 m and
+  ±75.0 by ±65.6 mm, with no face passing through another and no two
+  overlapping faces in one plane, at 400 samples per fold; Decision 3's
+  conversion checked for valleys, mountains and both-sides folds;
+  Decision 6's sign checked against r187's Object3D.js and Matrix4.js
+  and the camera on +z; fixed: Context names the r187 sources checked,
+  Decision 6 shows why −π swings the right edge towards the viewer,
+  Step 3 updates setSequencePosition()'s range.
+- **2026-11-10T15:23:14Z** — **implemented**: Steps 1 to 3; added
+  `docs/src/designs/steps.js`, `watermelon.js` and `list.js`; changed
+  `paper-dart.js`, `paper-hat.js`, `fold/engine.js` (readSteps() and
+  toFoldLayers() check and convert the steps before any fold runs;
+  errors name the step), `fold/pose.js` (foldPositionAt(),
+  viewTurnRadiansAt(), `SAMPLES_PER_STEP`), `fold/stepper.js` (comments
+  only), `scene/paper.js` (`turnGroup`), `ui/fold-buttons.js`,
+  `main.js` and `docs/index.html`; every Agent QA line failed before the
+  work for the expected reason and passes after it, unchanged; the
+  makers now freeze `layers`, so the dart and hat pass them plain;
+  `main.js`'s "mid-fold" comment now says "mid-step"; a 60 fps
+  simulation of the watermelon folding and unfolding shows no jump, at
+  most 0.224 rad of turn per frame; Manual QA walked against the code
+  and unchanged.
+- **2026-11-10T15:23:14Z** — **verified**: agent checks pass: 22
+  modules parse, no long lines in changed files bar `index.html`'s
+  favicon `data:` URL and canvas `aria-label`, both unchanged, `/` and
+  every file under `docs/src/` served with status 200, vendored
+  checksums match "as stored"; browser not run.
+- **2026-11-10T15:29:25Z** — **quality-checked**: Fixed: no code;
+  Step 1 gains Agent QA 5 and 6 and two bullets, since mutants survived
+  every earlier line: mirroring a fold after two turn-overs (`=== 0`
+  for `% 2 === 0` in readSteps()), a linear rather than eased turn in
+  viewTurnRadiansAt(), and "moves nothing" and "stops short" errors
+  naming the fold's index, not the step's; Deferred: an empty `steps`,
+  or one of turn-overs only, passes cutSheet() and then throws in
+  foldPositionAt() or writePaperPositions() (`steps[0]` or `folds[0]`
+  undefined), as zero folds did before this plan, but no design or
+  button reaches it, so a `Design "<id>" has no folds` check in
+  readSteps() waits for a need; maxPaperRadius() poses each turn-over
+  32 times to no effect, a load-time cost only; mutants left alive and
+  equivalent for the three designs: sampling maxPaperRadius() per fold
+  rather than per step (radii unchanged) and an unclamped clampUnit()
+  (the stepper keeps the position within 0 to the step count); Verified
+  fine: Agent QA Step 1 1–4, Step 2 1–2 and Step 3 1–2 pass unchanged;
+  16 mutants of engine.js and pose.js, 14 caught, files restored by
+  checksum; per-frame path (stepSequence(), setSequencePosition(),
+  writePaperPositions(), foldPositionAt(), viewTurnRadiansAt(),
+  smoothstep(), r187 Euler `set y` → setFromEuler()) allocates nothing;
+  the turn is continuous across every step boundary, and the folds hold
+  still through it; `turnGroup` holds no GPU resource and resize,
+  disposal, shadows' frustum and the bounding sphere are untouched;
+  doc comments name the view or front frame; Manual QA walked against
+  the code, no drift; agent checks pass (22 modules parse, only
+  `index.html` lines 10 and 27, unchanged, pass 80 columns, `/` and 23
+  files under `src/` and `styles/` served 200, vendored checksums match);
+  browser not run.
+- **2026-11-10T21:41:56Z** — **done**: the Lead Developer's manual QA
+  passed in the browser, the watermelon's two turn-overs among it; no
+  change to the turn-over's pace, a fold's time, was asked for.

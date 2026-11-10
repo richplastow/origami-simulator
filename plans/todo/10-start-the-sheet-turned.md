@@ -18,7 +18,7 @@ type: plan
   holds the yacht as design 2 and the cone as design 4. Of the 17
   designs whose start is known, 13 start white side up and 8 as a
   diamond.
-- Depends on [Plan 09](./09-turn-the-paper-over.md): its view frame,
+- Depends on [Plan 09](../done/09-turn-the-paper-over.md): its view frame,
   its `steps`, its turn-over, its `DESIGNS` list and its `turnGroup`.
   It extends cutSheet() in `docs/src/fold/engine.js`, stepSequence() in
   `docs/src/fold/stepper.js`, `docs/src/designs/sheet.js` and
@@ -46,7 +46,7 @@ type: plan
 
 ## Definitions
 
-The terms of [Plan 09](./09-turn-the-paper-over.md#definitions) apply.
+The terms of [Plan 09](../done/09-turn-the-paper-over.md#definitions) apply.
 Two more:
 
 - **Roll**: a turn of the flat sheet in its own plane, about the line
@@ -105,7 +105,7 @@ Two more:
    folded plane is mirrored left to right if the back is towards the
    viewer, then rolled, to give what the viewer sees; each turn-over
    mirrors that again, as in
-   [Plan 09](./09-turn-the-paper-over.md#decisions). cutSheet() takes
+   [Plan 09](../done/09-turn-the-paper-over.md#decisions). cutSheet() takes
    each fold's ends back through the same steps in reverse, and swaps
    the ends and the type whenever the viewer sees the back. So a
    diamond's folds are written with its corners at the top, bottom,
@@ -212,9 +212,9 @@ Two more:
    Expect: `front -18.75 -18.75 valley`, then
    `back 18.75 -18.75 mountain` (a diamond's top corner folded down to
    its centre; prototype)
-3. Do: [Plan 09's Step 1](./09-turn-the-paper-over.md#step-1-steps-in-the-engine-and-the-pose)
+3. Do: [Plan 09's Step 1](../done/09-turn-the-paper-over.md#step-1-steps-in-the-engine-and-the-pose)
    Agent QA 1 and 2, and
-   [its Step 2](./09-turn-the-paper-over.md#step-2-the-watermelon-and-the-list-of-designs)
+   [its Step 2](../done/09-turn-the-paper-over.md#step-2-the-watermelon-and-the-list-of-designs)
    Agent QA 1, unchanged.
    Expect: each gives its own `Expect:`.
 

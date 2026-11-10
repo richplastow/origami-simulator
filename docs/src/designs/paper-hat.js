@@ -4,10 +4,9 @@
  */
 
 import { sheetSize } from "./sheet.js";
+import { createFold } from "./steps.js";
 
 const ASPECT = Math.SQRT1_2; // A4's shape, 1 : √2, upright
-
-const FLAT_FOLD_RADIANS = Math.PI; // a fold pressed flat, 180°
 
 const { widthMeters } = sheetSize(ASPECT);
 const HALF_WIDTH = widthMeters / 2;
@@ -23,7 +22,8 @@ const MIDDLE_RIGHT = [HALF_WIDTH, 0];
 
 /** #### The paper hat: an A4-shaped sheet and the five folds that make it
  * - Each fold's line runs `from` → `to` in the folded plane, in metres, and
- *   the side to its left, seen from the front, moves.
+ *   the side to its left, seen from the front, moves. The hat never turns
+ *   over, so the viewer always sees it from the front.
  * - Fold 1 folds the top half behind; folds 2 and 3 bring the top corners
  *   forward to the centre; fold 4 turns the front layer's strip up, and
  *   fold 5 the back layer's, the same line folded opposite ways.
@@ -31,35 +31,12 @@ const MIDDLE_RIGHT = [HALF_WIDTH, 0];
  */
 export const PAPER_HAT = Object.freeze({
   aspect: ASPECT,
-  folds: Object.freeze([
+  id: "paper-hat",
+  steps: Object.freeze([
     createFold(MIDDLE_LEFT, "all", MIDDLE_RIGHT, "mountain"),
     createFold(BRIM_LEFT, "all", CENTRE, "valley"),
     createFold(CENTRE, "all", BRIM_RIGHT, "valley"),
-    createFold(BRIM_RIGHT, Object.freeze({ heldBy: 0 }), BRIM_LEFT, "valley"),
-    createFold(
-      BRIM_RIGHT,
-      Object.freeze({ movedBy: 0 }),
-      BRIM_LEFT,
-      "mountain",
-    ),
+    createFold(BRIM_RIGHT, { heldBy: 0 }, BRIM_LEFT, "valley"),
+    createFold(BRIM_RIGHT, { movedBy: 0 }, BRIM_LEFT, "mountain"),
   ]),
-  id: "paper-hat",
 });
-
-/** #### Creates one frozen fold of the hat, pressed flat
- * @param from The fold line's start, `[x, y]` in metres.
- * @param layers `"all"`, `{ heldBy }` or `{ movedBy }`, a fold index.
- * @param to The fold line's end, `[x, y]` in metres.
- * @param type `"mountain"` or `"valley"`.
- * @returns The fold, turning its moving side to 180°.
- */
-function createFold(from, layers, to, type) {
-  return Object.freeze({
-    from: Object.freeze(from),
-    layers,
-    targetRadians: FLAT_FOLD_RADIANS,
-    to: Object.freeze(to),
-    turns: "moving-side",
-    type,
-  });
-}

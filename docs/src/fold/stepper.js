@@ -1,21 +1,24 @@
 /**
  * @fileoverview
- * Moves the sequence position through a design's folds, one fold at a time,
- * towards a target, by way of the flat sheet stretching when the target
- * names another design, and fades the printed fold lines in and out.
+ * Moves the sequence position through a design's steps, folds and
+ * turn-overs, one step at a time, towards a target, by way of the flat
+ * sheet stretching when the target names another design, and fades the
+ * printed fold lines in and out.
  */
 
 export const FADE_IN_SECONDS = 0.6; // the fold lines, from hidden to shown
 export const FADE_OUT_SECONDS = 0.3; // the fold lines, from shown to hidden
-export const FOLD_SECONDS = 0.7; // one fold, folding
+export const FOLD_SECONDS = 0.7; // one step, a fold or a turn-over, forwards
 export const STRETCH_SECONDS = 0.4; // the flat sheet, from one shape to another
-export const UNFOLD_SECONDS = 0.35; // one fold, unfolding: twice as fast
+export const UNFOLD_SECONDS = 0.35; // one step, backwards: twice as fast
 
 /** #### Advances the sequence state one frame towards the target
- * - The position moves linearly in time; the pose eases each fold.
- * - One phase runs at a time: a stretch, then any fade, then a fold. The
+ * - The position moves linearly in time, one step in `FOLD_SECONDS`
+ *   forwards or `UNFOLD_SECONDS` back, a turn-over as a fold; the pose
+ *   eases each step.
+ * - One phase runs at a time: a stretch, then any fade, then a step. The
  *   target is read only at a whole position with no stretch or fade under
- *   way, so a fold, fade or stretch in progress always finishes first.
+ *   way, so a step, fade or stretch in progress always finishes first.
  *   Time left over carries on into the next phase, so the total time does
  *   not depend on the frame rate.
  * - While the target names another design, the paper unfolds towards 0,
@@ -40,7 +43,7 @@ export const UNFOLD_SECONDS = 0.35; // one fold, unfolding: twice as fast
  *   while folding, −1 while unfolding and 0 at rest, stretching or
  *   fading; `linesFade`, 1 while the lines fade in, −1 while they fade
  *   out and 0 otherwise; `linesVisibility`, from 0 (hidden) to 1 (shown),
- *   linear in time; `position`, from 0 (flat) to the design's fold count;
+ *   linear in time; `position`, from 0 (flat) to the design's step count;
  *   `stretchFromId`, the design whose sheet the stretch started from; and
  *   `stretchProgress`, from 0 to 1, linear in time.
  * @param target The target: `designId`, or null for flat; `linesOn`,

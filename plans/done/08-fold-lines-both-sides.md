@@ -18,7 +18,7 @@ type: plan
   [Plan 04](./04-paper-colours.md), whose colour fade the new
   lines follow; and on [Plan 06](./06-self-shadows.md), whose
   shadows it must leave as they are. It feeds
-  [Plan 09](../todo/09-turn-the-paper-over.md), which turns the paper over.
+  [Plan 09](./09-turn-the-paper-over.md), which turns the paper over.
 - Three.js APIs below were checked against the
   [r187 source](https://github.com/mrdoob/three.js/tree/r187/src) on
   2026-11-10:

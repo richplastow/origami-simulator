@@ -16,38 +16,53 @@ const MIN_AREA_SQUARE_METERS = 1e-10;
 const TOLERANCE_METERS = 1e-9;
 
 /** #### Cuts a design's sheet into faces by running each of its folds once
+ * - Reads the design's steps first, turning each fold from the view frame,
+ *   as the viewer sees the paper at that step, into the front's terms, as
+ *   readSteps() sets out. A turn-over folds nothing, so leaves the faces as
+ *   they are.
  * - Each fold splits the faces it selects along its line, reflects the
  *   pieces to the line's left across it, and stacks them, in reverse
  *   order, above every face for a valley or below every face for a
  *   mountain.
  * - Each face holds its `polygon` in sheet coordinates, anticlockwise from
- *   the front, in metres; `movedBy`, the indices of the folds that moved
- *   it; and, per stage from 0 (flat) to the fold count, its `placements`,
- *   `[a, b, c, d, tx, ty]` for `x' = a·x + c·y + tx`,
- *   `y' = b·x + d·y + ty`, and its `layers`, counted from 1 at the back.
+ *   the front, in metres; `movedBy`, the indices in `folds` of the folds
+ *   that moved it; and, per stage from 0 (flat) to the fold count, its
+ *   `placements`, `[a, b, c, d, tx, ty]` for `x' = a·x + c·y + tx`,
+ *   `y' = b·x + d·y + ty`, into the folded plane as seen from the front,
+ *   and its `layers`, counted from 1 at the back.
  * - Each stage's centre, `[x, y]` in metres, is the centre of the faces'
- *   bounding box in the folded plane at that stage, so the paper can slide
- *   to stay centred. A fold that turns both sides, or stops short of 180°,
- *   keeps the centre it starts with, so its stage repeats the one before.
+ *   bounding box in the folded plane at that stage, as seen from the
+ *   front, so the paper can slide to stay centred. A fold that turns both
+ *   sides, or stops short of 180°, keeps the centre it starts with, so its
+ *   stage repeats the one before.
  * - Each bridge is a quad of vertex indices, `[a0, a1, b0, b1]`, joining
  *   an edge that two faces share, where `a0` and `b0` are the same sheet
  *   point. Vertices are counted face by face, around each polygon.
  * - Each crease line is where a fold's line crosses one face it splits,
  *   in sheet coordinates: `from` and `to`, `[x, y]` in metres, in no set
- *   order, and `type`, as seen from the sheet's front: the fold's type,
- *   or the opposite when the face lies face down before the fold. Lines
- *   are not merged, so a fold through several layers gives several.
- * - Throws, naming the design, when a fold moves nothing, when a fold that
- *   stops short of 180° is followed by a fold that moves its faces, and
+ *   order, and `type`, as seen from the sheet's front: the fold's type in
+ *   the front's terms, or the opposite when the face lies face down before
+ *   the fold. Lines are not merged, so a fold through several layers gives
+ *   several.
+ * - Throws, naming the design and a step by its index in `steps`, before
+ *   any fold runs, when a step's `kind` is unknown and when a fold's
+ *   `layers` name a step that is not a fold; and, as the folds run, when a
+ *   fold moves nothing and when a fold that stops short of 180° is
+ *   followed by a fold that moves its faces. Throws, naming the design,
  *   when the final faces leave a T-junction.
  * - Pure maths, with no DOM or GPU access.
- * @param design The design: `aspect`, `folds` and `id`.
- * @returns The sheet: `bridges`, `centres`, one per stage from 0 (flat) to
- *   the fold count, `creaseLines`, `designId`, `faces`, `folds`,
- *   `heightMeters` and `widthMeters`.
+ * @param design The design: `aspect`, `id` and `steps`, each a fold, in
+ *   the view frame, or a turn-over.
+ * @returns The sheet: `bridges`; `centres`, one per stage from 0 (flat) to
+ *   the fold count; `creaseLines`; `designId`; `faces`; `folds`, in the
+ *   front's terms, whose `layers` name a fold by its index in `folds`;
+ *   `heightMeters`; `steps`, one per step of the design, each with
+ *   `foldsBefore`, the folds done before it, `kind`, and
+ *   `turnOversBefore`, the turn-overs done before it; and `widthMeters`.
  */
 export const cutSheet = (design) => {
-  const { folds, id } = design;
+  const { id } = design;
+  const { folds, stepIndices, steps } = readSteps(design);
   const { heightMeters, widthMeters } = sheetSize(design.aspect);
   const halfWidth = widthMeters / 2;
   const halfHeight = heightMeters / 2;
@@ -66,8 +81,9 @@ export const cutSheet = (design) => {
     },
   ];
   const creaseLines = [];
-  folds.forEach((fold, foldIndex) => {
-    const result = applyFold(faces, foldIndex, design);
+  const sequence = { folds, id, stepIndices };
+  folds.forEach((_fold, foldIndex) => {
+    const result = applyFold(faces, foldIndex, sequence);
     faces = result.faces;
     creaseLines.push(...result.creaseLines);
   });
@@ -90,6 +106,7 @@ export const cutSheet = (design) => {
     })),
     folds,
     heightMeters,
+    steps,
     widthMeters,
   };
 };
@@ -104,13 +121,16 @@ export const stopsShort = (fold) => fold.targetRadians < Math.PI;
  * - Every face gains one placement and one rank, for the stage after it.
  * - Every face the fold splits gives one crease line, typed as seen from
  *   the sheet's front.
+ * - Its errors name a fold by its step's index in the design's `steps`.
  * @param faces The faces before the fold, each with `ranks`.
- * @param foldIndex The fold's index in the design's `folds`.
- * @param design The design, for its folds and its `id`.
+ * @param foldIndex The fold's index in `folds`.
+ * @param sequence The design's `folds`, in the front's terms; its `id`;
+ *   and `stepIndices`, each fold's index in the design's `steps`.
  * @returns The `faces` after the fold, and the `creaseLines` it makes.
  */
-const applyFold = (faces, foldIndex, design) => {
-  const fold = design.folds[foldIndex];
+const applyFold = (faces, foldIndex, sequence) => {
+  const { folds, id, stepIndices } = sequence;
+  const fold = folds[foldIndex];
   const [px, py] = fold.from;
   const length = Math.hypot(fold.to[0] - px, fold.to[1] - py);
   const ux = (fold.to[0] - px) / length;
@@ -156,14 +176,16 @@ const applyFold = (faces, foldIndex, design) => {
   }
 
   if (moving.length === 0) {
-    throw new Error(`Fold ${foldIndex} of design "${design.id}" moves nothing`);
+    throw new Error(
+      `Step ${stepIndices[foldIndex]} of design "${id}" moves nothing`,
+    );
   }
   for (const { movedBy } of moving) {
-    const earlier = movedBy.find((j) => stopsShort(design.folds[j]));
+    const earlier = movedBy.find((j) => stopsShort(folds[j]));
     if (earlier !== undefined) {
       throw new Error(
-        `Fold ${earlier} of design "${design.id}" stops short, ` +
-          `but fold ${foldIndex} moves its faces`,
+        `Step ${stepIndices[earlier]} of design "${id}" stops short, ` +
+          `but step ${stepIndices[foldIndex]} moves its faces`,
       );
     }
   }
@@ -391,6 +413,73 @@ const pointBetween = (point, next, s, t) => {
   ];
 };
 
+/** #### Reads a design's steps into its folds, in the front's terms
+ * - Checks every step before any fold runs: its `kind`, and, for a fold
+ *   that selects its layers, that its `layers` name a fold.
+ * - A fold made after an odd number of turn-overs is seen from the back,
+ *   whose view frame mirrors the front's left to right. Its ends' `x` are
+ *   negated and its ends swapped, so the same side lies to its line's
+ *   left, and its type is made the opposite, since towards the viewer is
+ *   then away from the front. A fold seen from the front is used as
+ *   written.
+ * - Each fold's `layers` turn from naming a step to naming a fold, by its
+ *   index in `folds`.
+ * @param design The design: `id` and `steps`.
+ * @returns `folds`, frozen, in the front's terms; `stepIndices`, each
+ *   fold's index in the design's `steps`; and `steps`, frozen, one per
+ *   step, each with `foldsBefore`, `kind` and `turnOversBefore`.
+ */
+const readSteps = (design) => {
+  const { id } = design;
+  const foldIndices = []; // per step, its index in `folds`, if a fold
+  const stepIndices = [];
+  const steps = [];
+  let turnOvers = 0;
+  design.steps.forEach(({ kind }, stepIndex) => {
+    if (kind !== "fold" && kind !== "turn-over") {
+      throw new Error(
+        `Step ${stepIndex} of design "${id}" has unknown kind "${kind}"`,
+      );
+    }
+
+    steps.push(
+      Object.freeze({
+        foldsBefore: stepIndices.length,
+        kind,
+        turnOversBefore: turnOvers,
+      }),
+    );
+    if (kind === "turn-over") {
+      turnOvers++;
+    } else {
+      foldIndices[stepIndex] = stepIndices.length;
+      stepIndices.push(stepIndex);
+    }
+  });
+
+  const folds = stepIndices.map((stepIndex) => {
+    const fold = design.steps[stepIndex];
+    const layers = toFoldLayers(design, fold.layers, foldIndices, stepIndex);
+    if (steps[stepIndex].turnOversBefore % 2 === 0) {
+      return Object.freeze({ ...fold, layers });
+    }
+
+    return Object.freeze({
+      ...fold,
+      from: Object.freeze([-fold.to[0], fold.to[1]]),
+      layers,
+      to: Object.freeze([-fold.from[0], fold.from[1]]),
+      type: oppositeType(fold.type),
+    });
+  });
+
+  return {
+    folds: Object.freeze(folds),
+    stepIndices,
+    steps: Object.freeze(steps),
+  };
+};
+
 /** #### Returns true if two points are one
  * @param first The first point, `[x, y]`.
  * @param second The second point, `[x, y]`.
@@ -491,4 +580,38 @@ const stageCentres = (faces, folds) => {
   }
 
   return centres;
+};
+
+/** #### Turns a fold's layer selection from naming a step to naming a fold
+ * - Throws, naming the design and both steps, if the step named is not a
+ *   fold. Leaves a selection it does not know as it is, for selectsFace()
+ *   to throw on.
+ * @param design The design: `id` and `steps`.
+ * @param layers `"all"`, `{ heldBy }` or `{ movedBy }`, a step index.
+ * @param foldIndices Per step, its index in `folds`, if a fold.
+ * @param stepIndex The index in `steps` of the fold that selects.
+ * @returns `"all"`, or a frozen `{ heldBy }` or `{ movedBy }`, a fold
+ *   index.
+ */
+const toFoldLayers = (design, layers, foldIndices, stepIndex) => {
+  if (layers === "all") return layers;
+
+  // Checked in the order selectsFace() reads them.
+  const key =
+    layers.movedBy !== undefined
+      ? "movedBy"
+      : layers.heldBy !== undefined
+        ? "heldBy"
+        : null;
+  if (key === null) return layers;
+
+  const named = layers[key];
+  if (design.steps[named]?.kind !== "fold") {
+    throw new Error(
+      `Step ${stepIndex} of design "${design.id}" names step ${named}, ` +
+        "which is not a fold",
+    );
+  }
+
+  return Object.freeze({ [key]: foldIndices[named] });
 };

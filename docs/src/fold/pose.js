@@ -1,7 +1,8 @@
 /**
  * @fileoverview
- * Poses a cut sheet at a point in its fold sequence, with its layers held
- * apart by the paper's thickness.
+ * Poses a cut sheet at a point in its sequence of steps, with its layers
+ * held apart by the paper's thickness, and finds how far the model has
+ * turned over.
  */
 
 import { smoothstep } from "./easing.js";
@@ -10,13 +11,19 @@ import { stopsShort } from "./engine.js";
 // About one sheet of 80 gsm paper; tuned by eye.
 export const PAPER_THICKNESS_METERS = 0.0001;
 
-const SAMPLES_PER_FOLD = 32; // poses per fold that maxPaperRadius() measures
+const SAMPLES_PER_STEP = 32; // poses per step that maxPaperRadius() measures
+
+// Each turn-over turns the model half a turn about its upright axis, the
+// negative way, so its right edge swings towards the viewer, on +Z.
+const TURN_OVER_RADIANS = -Math.PI;
 
 // Scratch for the vertex being posed, `[x, y, z]` in metres, reused so
 // posing allocates nothing.
 const point = new Float64Array(3);
 
 /** #### Writes every vertex of a cut sheet, posed at a sequence position
+ * - Poses the folds at foldPositionAt(), so the paper holds still through a
+ *   turn-over, which turns a group around it instead.
  * - During a fold, a face the fold moves turns about the fold's line, by
  *   the fold's eased angle, towards +Z for a valley or −Z for a mountain.
  * - Each face shifts along its normal by the paper's thickness for each
@@ -35,23 +42,25 @@ const point = new Float64Array(3);
  * - After every turn, the paper slides by minus the sheet's stage centre,
  *   easing from one stage's to the next with the fold, so each stage's
  *   folded shape stays centred on the origin.
- * - Vertices run face by face, around each face's polygon.
+ * - Vertices run face by face, around each face's polygon, in the folded
+ *   plane as seen from the front.
  * - Allocates nothing, so it is safe on the per-frame path.
  * - Pure maths, with no DOM or GPU access.
  * @param positions An array of three numbers per vertex, in metres,
  *   overwritten.
- * @param sequencePosition From 0 (flat) to the fold count: whole folds
+ * @param sequencePosition From 0 (flat) to the step count: whole steps
  *   done, plus the linear progress through the next.
  * @param sheet The sheet that cutSheet() returns.
  */
 export const writePaperPositions = (positions, sequencePosition, sheet) => {
   const { centres, faces, folds } = sheet;
+  const foldPosition = foldPositionAt(sequencePosition, sheet);
   const foldIndex = Math.max(
     0,
-    Math.min(Math.floor(sequencePosition), folds.length - 1),
+    Math.min(Math.floor(foldPosition), folds.length - 1),
   );
   const fold = folds[foldIndex];
-  const progress = smoothstep(sequencePosition - foldIndex);
+  const progress = smoothstep(foldPosition - foldIndex);
   const isFlatFold = !stopsShort(fold);
   const foldPivotLayers = isFlatFold ? 0 : pivotLayers(faces, fold, foldIndex);
   const fromCentre = centres[foldIndex];
@@ -132,9 +141,29 @@ export const writePaperPositions = (positions, sequencePosition, sheet) => {
   }
 };
 
+/** #### Returns the folds done at a sequence position, which counts steps
+ * - Whole folds done, plus the linear progress through the fold under way.
+ *   It holds still through a turn-over.
+ * - Allocates nothing, so it is safe on the per-frame path.
+ * - Pure maths, with no DOM or GPU access.
+ * @param sequencePosition From 0 (flat) to the step count: whole steps
+ *   done, plus the linear progress through the next.
+ * @param sheet The sheet that cutSheet() returns.
+ * @returns From 0 (flat) to the fold count.
+ */
+export const foldPositionAt = (sequencePosition, sheet) => {
+  const stepIndex = stepIndexAt(sequencePosition, sheet);
+  const step = sheet.steps[stepIndex];
+  if (step.kind !== "fold") return step.foldsBefore;
+
+  return step.foldsBefore + clampUnit(sequencePosition - stepIndex);
+};
+
 /** #### Returns the largest distance any vertex reaches from the origin
- * - Samples every fold of the sequence, from flat to finished, so a
- *   sphere of this radius at the origin holds the paper throughout.
+ * - Samples every step of the sequence, from flat to finished, so a
+ *   sphere of this radius at the origin holds the paper throughout. A
+ *   turn-over turns the paper about an axis through the origin, so moves
+ *   no vertex nearer or further.
  * - Allocates, so call it once, at load.
  * @param sheet The sheet that cutSheet() returns.
  * @returns The radius, in metres.
@@ -145,11 +174,11 @@ export const maxPaperRadius = (sheet) => {
     0,
   );
   const positions = new Float64Array(3 * vertexCount);
-  const sampleCount = SAMPLES_PER_FOLD * sheet.folds.length;
+  const sampleCount = SAMPLES_PER_STEP * sheet.steps.length;
 
   let radiusMeters = 0;
   for (let sample = 0; sample <= sampleCount; sample++) {
-    writePaperPositions(positions, sample / SAMPLES_PER_FOLD, sheet);
+    writePaperPositions(positions, sample / SAMPLES_PER_STEP, sheet);
     for (let i = 0; i < positions.length; i += 3) {
       radiusMeters = Math.max(
         radiusMeters,
@@ -160,6 +189,33 @@ export const maxPaperRadius = (sheet) => {
 
   return radiusMeters;
 };
+
+/** #### Returns how far the model has turned about its upright axis
+ * - Each turn-over turns it by −π radians, eased as a fold is, so its
+ *   right edge swings towards the viewer; it ends at −π times the count.
+ * - Allocates nothing, so it is safe on the per-frame path.
+ * - Pure maths, with no DOM or GPU access.
+ * @param sequencePosition From 0 (flat) to the step count: whole steps
+ *   done, plus the linear progress through the next.
+ * @param sheet The sheet that cutSheet() returns.
+ * @returns The turn, in radians, 0 before any turn-over.
+ */
+export const viewTurnRadiansAt = (sequencePosition, sheet) => {
+  const stepIndex = stepIndexAt(sequencePosition, sheet);
+  const step = sheet.steps[stepIndex];
+  const turnOvers =
+    step.kind === "turn-over"
+      ? step.turnOversBefore + smoothstep(sequencePosition - stepIndex)
+      : step.turnOversBefore;
+
+  return TURN_OVER_RADIANS * turnOvers;
+};
+
+/** #### Clamps a value to the range 0 to 1
+ * @param value The value.
+ * @returns The value, no less than 0 and no more than 1.
+ */
+const clampUnit = (value) => Math.min(Math.max(value, 0), 1);
 
 /** #### Returns the value a fraction of the way from one value to another
  * @param from The value at fraction 0.
@@ -216,6 +272,15 @@ const pivotLayers = (faces, fold, foldIndex) => {
 
   return pivot;
 };
+
+/** #### Returns the index of the step under way at a sequence position
+ * - The last step's, at the end of the sequence.
+ * @param sequencePosition From 0 (flat) to the step count.
+ * @param sheet The sheet that cutSheet() returns.
+ * @returns The step's index in the sheet's `steps`.
+ */
+const stepIndexAt = (sequencePosition, sheet) =>
+  Math.max(0, Math.min(Math.floor(sequencePosition), sheet.steps.length - 1));
 
 /** #### Returns the direction a fold turns its moving side
  * @param fold The fold.

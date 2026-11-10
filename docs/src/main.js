@@ -1,12 +1,12 @@
 /**
  * @fileoverview
  * Entry point: draws a lit sheet of paper, which shadows itself, on a
- * transparent canvas, and folds it into the paper dart or the paper hat, or
- * back to flat, as the buttons choose, stretching the flat sheet from one
- * design's shape to the other's between them, with each design's fold lines
- * printed on it while the "Fold lines" checkbox is ticked, fades its front to
- * the colour the swatches choose, and turns it like a turntable as a drag on
- * the canvas moves.
+ * transparent canvas, and folds it into the design a button chooses, turning
+ * it over where the design says, or back to flat, stretching the flat sheet
+ * from one design's shape to the next's between them, with each design's
+ * fold lines printed on it while the "Fold lines" checkbox is ticked, fades
+ * its front to the colour the swatches choose, and turns it like a turntable
+ * as a drag on the canvas moves.
  */
 
 import {
@@ -17,8 +17,7 @@ import {
   WebGLRenderer,
 } from "three";
 import { distanceToFitSphere } from "./camera/fit.js";
-import { PAPER_DART } from "./designs/paper-dart.js";
-import { PAPER_HAT } from "./designs/paper-hat.js";
+import { DESIGNS } from "./designs/list.js";
 import { writeStretchScale } from "./designs/sheet.js";
 import { cutSheet } from "./fold/engine.js";
 import { maxPaperRadius } from "./fold/pose.js";
@@ -49,11 +48,13 @@ const MIN_PITCH_RADIANS = -(Math.PI / 2 + CAMERA_ELEVATION_RADIANS);
 const canvas = document.querySelector(".scene");
 
 // Every design, and its sheet cut once at load, keyed by the design's `id`.
-const designs = { [PAPER_DART.id]: PAPER_DART, [PAPER_HAT.id]: PAPER_HAT };
-const sheets = {
-  [PAPER_DART.id]: cutSheet(PAPER_DART),
-  [PAPER_HAT.id]: cutSheet(PAPER_HAT),
-};
+const designs = Object.fromEntries(
+  DESIGNS.map((design) => [design.id, design]),
+);
+const sheets = Object.fromEntries(
+  DESIGNS.map((design) => [design.id, cutSheet(design)]),
+);
+const [firstDesign] = DESIGNS;
 
 // The sphere that holds the paper over every design's whole fold sequence,
 // so the camera never moves while the paper folds or switches designs.
@@ -76,15 +77,15 @@ const camera = new PerspectiveCamera(
 );
 const timer = new Timer();
 
-// The paper starts as the dart's flat square, done stretching, with no
-// fold lines showing, and stays there until a button sets a target.
+// The paper starts as the first design's flat sheet, done stretching, with
+// no fold lines showing, and stays there until a button sets a target.
 const sequenceState = {
-  designId: PAPER_DART.id,
+  designId: firstDesign.id,
   direction: 0,
   linesFade: 0,
   linesVisibility: 0,
   position: 0,
-  stretchFromId: PAPER_DART.id,
+  stretchFromId: firstDesign.id,
   stretchProgress: 1,
 };
 const sequenceTarget = { designId: null, linesOn: true, position: 0 };
@@ -146,8 +147,8 @@ new ResizeObserver(([entry]) => {
   resize(entry.contentRect.width, entry.contentRect.height);
 }).observe(canvas);
 
-// A press or a tick mid-fold changes only the target, which the stepper
-// reads once the fold, fade or stretch in progress finishes. A button's
+// A press or a tick mid-step changes only the target, which the stepper
+// reads once the step, fade or stretch in progress finishes. A button's
 // target carries no `linesOn`, so Object.assign() keeps the checkbox's.
 connectFoldButtons((target) => Object.assign(sequenceTarget, target));
 connectFoldLinesToggle((linesOn) => {

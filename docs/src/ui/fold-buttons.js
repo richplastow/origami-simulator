@@ -1,25 +1,23 @@
 /**
  * @fileoverview
- * Connects the page's fold buttons to the point in a fold sequence that the
- * paper should move to.
+ * Connects the page's fold buttons to the point in a design's sequence of
+ * steps that the paper should move to.
  */
 
-import { PAPER_DART } from "../designs/paper-dart.js";
-import { PAPER_HAT } from "../designs/paper-hat.js";
+import { DESIGNS } from "../designs/list.js";
 
-// Each button's `data-fold` value, mapped to its sequence target. A
-// `designId` of null means flat, keeping the sheet showing.
-const FOLD_TARGETS = {
+// Each button's `data-fold` value, mapped to its sequence target: "flat",
+// whose `designId` of null means flat, keeping the sheet showing, and each
+// design's `id`, whose target is its last step.
+const FOLD_TARGETS = Object.freeze({
   flat: Object.freeze({ designId: null, position: 0 }),
-  "paper-dart": Object.freeze({
-    designId: PAPER_DART.id,
-    position: PAPER_DART.folds.length,
-  }),
-  "paper-hat": Object.freeze({
-    designId: PAPER_HAT.id,
-    position: PAPER_HAT.folds.length,
-  }),
-};
+  ...Object.fromEntries(
+    DESIGNS.map(({ id, steps }) => [
+      id,
+      Object.freeze({ designId: id, position: steps.length }),
+    ]),
+  ),
+});
 
 /** #### Passes a button's sequence target on whenever that button is clicked
  * - Each target is frozen: copy it rather than change it.

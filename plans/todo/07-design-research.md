@@ -91,7 +91,7 @@ needs a new ruling.
     `paper.group.rotation` in `docs/src/main.js`).
   - With [Ruling 1](#ruling-1-fold-lines-on-both-sides-of-every-sheet),
     the side that comes round already carries its lines.
-  - [Plan 09](./09-turn-the-paper-over.md#decisions) settles the
+  - [Plan 09](../done/09-turn-the-paper-over.md#decisions) settles the
     engineering: the turn's axis and duration, and folds written as
     the viewer sees them, which cutSheet() turns into the front's
     terms.
@@ -348,7 +348,7 @@ them:
 
 - [Plan 08](../done/08-fold-lines-both-sides.md): fold lines on both sides,
   checked on the dart and the hat.
-- [Plan 09](./09-turn-the-paper-over.md): the turn-over step, proved by
+- [Plan 09](../done/09-turn-the-paper-over.md): the turn-over step, proved by
   the watermelon, which turns over twice.
 - [Plan 10](./10-start-the-sheet-turned.md): the starting pose, proved
   by the yacht, which starts white side up, and the ice-cream cone,

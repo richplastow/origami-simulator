@@ -1,8 +1,9 @@
 /**
  * @fileoverview
  * The paper sheet: a two-tone, flat-shaded mesh with a fine grain on both
- * sides, posed along its design's fold sequence, with its crease pattern
- * printed on both sides, whose front colour fades to another on request.
+ * sides, posed along its design's sequence of folds and turn-overs, with its
+ * crease pattern printed on both sides, whose front colour fades to another
+ * on request.
  */
 
 import {
@@ -28,7 +29,7 @@ import {
   Vector3,
 } from "three";
 import { smoothstep } from "../fold/easing.js";
-import { writePaperPositions } from "../fold/pose.js";
+import { viewTurnRadiansAt, writePaperPositions } from "../fold/pose.js";
 import { drawFoldLines } from "./fold-lines.js";
 import { createGrainPixels, GRAIN_TEXTURE_PX, grainRepeat } from "./grain.js";
 
@@ -55,8 +56,11 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   unlit, and its lines are black already.
  * - The bounding sphere is set once per geometry, to hold the paper over
  *   its whole fold sequence.
- * - The meshes sit in an inner group, whose scale stretches the flat sheet
- *   between two designs' shapes, so `group` stays free to turn.
+ * - The meshes sit in three nested groups: `group`, outermost, which the
+ *   drag spins; `turnGroup`, within it, which turns the paper over about
+ *   its upright axis; and `stretchGroup`, innermost, whose scale stretches
+ *   the flat sheet between two designs' shapes. Each group's transform is
+ *   then free for its own job.
  * - The front's colour fades from the one showing to another through two
  *   scratch colours, mixed in Three.js's working colour space, and the
  *   back's lines follow it; the back's colour never changes.
@@ -77,7 +81,8 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   writeStretchScale(); startFrontColorFade(), which sets the front's next
  *   colour, and setFrontColorFade(), which fades the front towards it;
  *   setLinesVisibility(), which fades both sides' fold lines;
- *   setSequencePosition(), which poses the paper along its fold sequence;
+ *   setSequencePosition(), which poses the paper along its sequence of
+ *   steps and turns it over;
  *   and setSheet(), which swaps in another design's sheet.
  */
 export const createPaper = (frontColor, radiusMeters, sheet) => {
@@ -132,8 +137,10 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   const meshes = [frontMesh, backMesh, frontLinesMesh, backLinesMesh];
   const stretchGroup = new Group();
   stretchGroup.add(...meshes);
+  const turnGroup = new Group();
+  turnGroup.add(stretchGroup);
   const group = new Group();
-  group.add(stretchGroup);
+  group.add(turnGroup);
 
   // The front colour fade's start and end, created once and reused. Both
   // start as the front's colour, so a fade before the first start changes
@@ -183,13 +190,18 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
     backLinesMesh.visible = opacity > 0;
   };
 
-  /** #### Poses the paper at a point in its fold sequence
+  /** #### Poses the paper at a point in its sequence of steps
+   * - Writes the folds' pose into the geometry, and the turn-overs' turn
+   *   into `turnGroup`'s rotation about its upright axis, which passes
+   *   through the origin, where the folded shape stays centred.
    * - Allocates nothing, so it is safe on the per-frame path.
-   * @param sequencePosition From 0 (flat) to the design's fold count.
+   * @param sequencePosition From 0 (flat) to the design's step count:
+   *   whole steps done, plus the linear progress through the next.
    */
   const setSequencePosition = (sequencePosition) => {
     writePaperPositions(shown.positions, sequencePosition, shown.sheet);
     shown.positionAttribute.needsUpdate = true;
+    turnGroup.rotation.y = viewTurnRadiansAt(sequencePosition, shown.sheet);
   };
 
   /** #### Swaps in another design's sheet, posed flat
