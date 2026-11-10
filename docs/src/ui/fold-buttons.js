@@ -5,6 +5,7 @@
  */
 
 import { PAPER_DART } from "../designs/paper-dart.js";
+import { PAPER_HAT } from "../designs/paper-hat.js";
 
 // Each button's `data-fold` value, mapped to its sequence target. A
 // `designId` of null means flat, keeping the sheet showing.
@@ -13,6 +14,10 @@ const FOLD_TARGETS = {
   "paper-dart": Object.freeze({
     designId: PAPER_DART.id,
     position: PAPER_DART.folds.length,
+  }),
+  "paper-hat": Object.freeze({
+    designId: PAPER_HAT.id,
+    position: PAPER_HAT.folds.length,
   }),
 };
 

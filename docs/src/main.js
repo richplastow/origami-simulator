@@ -1,7 +1,9 @@
 /**
  * @fileoverview
- * Entry point: draws a lit square sheet of paper on a transparent canvas,
- * and folds it into the paper dart, or back to flat, as the buttons choose.
+ * Entry point: draws a lit sheet of paper on a transparent canvas, and
+ * folds it into the paper dart or the paper hat, or back to flat, as the
+ * buttons choose, stretching the flat sheet from one design's shape to the
+ * other's between them.
  */
 
 import {
@@ -13,6 +15,8 @@ import {
 } from "three";
 import { distanceToFitSphere } from "./camera/fit.js";
 import { PAPER_DART } from "./designs/paper-dart.js";
+import { PAPER_HAT } from "./designs/paper-hat.js";
+import { writeStretchScale } from "./designs/sheet.js";
 import { cutSheet } from "./fold/engine.js";
 import { maxPaperRadius } from "./fold/pose.js";
 import { stepSequence } from "./fold/stepper.js";
@@ -29,11 +33,19 @@ const FRAME_MARGIN = 1.1; // leaves room around the paper for the buttons
 const MAX_PIXEL_RATIO = 2; // caps GPU cost on high-density screens
 
 const canvas = document.querySelector(".scene");
-const sheet = cutSheet(PAPER_DART);
 
-// The sphere that holds the paper over its whole fold sequence, so the
-// camera never moves while the paper folds.
-const paperRadiusMeters = maxPaperRadius(sheet);
+// Every design, and its sheet cut once at load, keyed by the design's `id`.
+const designs = { [PAPER_DART.id]: PAPER_DART, [PAPER_HAT.id]: PAPER_HAT };
+const sheets = {
+  [PAPER_DART.id]: cutSheet(PAPER_DART),
+  [PAPER_HAT.id]: cutSheet(PAPER_HAT),
+};
+
+// The sphere that holds the paper over every design's whole fold sequence,
+// so the camera never moves while the paper folds or switches designs.
+const paperRadiusMeters = Math.max(
+  ...Object.values(sheets).map((sheet) => maxPaperRadius(sheet)),
+);
 
 // An `alpha` canvas clears to transparent, so the page shows through.
 const renderer = new WebGLRenderer({ alpha: true, antialias: true, canvas });
@@ -45,11 +57,21 @@ const camera = new PerspectiveCamera(
   CAMERA_FAR_METERS,
 );
 const timer = new Timer();
-const paper = createPaper(paperRadiusMeters, sheet);
 
-// The paper starts flat, and stays there until a button sets a target.
-const sequenceState = { designId: PAPER_DART.id, direction: 0, position: 0 };
+// The paper starts as the dart's flat square, done stretching, and stays
+// there until a button sets a target.
+const sequenceState = {
+  designId: PAPER_DART.id,
+  direction: 0,
+  position: 0,
+  stretchFromId: PAPER_DART.id,
+  stretchProgress: 1,
+};
 const sequenceTarget = { designId: null, position: 0 };
+const paper = createPaper(paperRadiusMeters, sheets[sequenceState.designId]);
+
+// The design whose sheet the paper's geometry holds.
+let shownDesignId = sequenceState.designId;
 
 scene.add(paper.group, ...createLights());
 
@@ -94,8 +116,16 @@ timer.connect(document);
 
 renderer.setAnimationLoop((timestampMs) => {
   timer.update(timestampMs);
-  if (stepSequence(timer.getDelta(), sequenceState, sequenceTarget)) {
+  if (stepSequence(timer.getDelta(), designs, sequenceState, sequenceTarget)) {
+    // The design changes only at rest, with the paper flat.
+    if (sequenceState.designId !== shownDesignId) {
+      shownDesignId = sequenceState.designId;
+      paper.setSheet(sheets[shownDesignId]);
+    }
     paper.setSequencePosition(sequenceState.position);
+
+    // Written on every change, so the scale ends on exactly 1.
+    writeStretchScale(designs, paper.stretchScale, sequenceState);
   }
   renderer.render(scene, camera);
 });

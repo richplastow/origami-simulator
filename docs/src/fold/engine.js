@@ -25,6 +25,10 @@ const TOLERANCE_METERS = 1e-9;
  *   it; and, per stage from 0 (flat) to the fold count, its `placements`,
  *   `[a, b, c, d, tx, ty]` for `x' = a·x + c·y + tx`,
  *   `y' = b·x + d·y + ty`, and its `layers`, counted from 1 at the back.
+ * - Each stage's centre, `[x, y]` in metres, is the centre of the faces'
+ *   bounding box in the folded plane at that stage, so the paper can slide
+ *   to stay centred. A fold that turns both sides, or stops short of 180°,
+ *   keeps the centre it starts with, so its stage repeats the one before.
  * - Each bridge is a quad of vertex indices, `[a0, a1, b0, b1]`, joining
  *   an edge that two faces share, where `a0` and `b0` are the same sheet
  *   point. Vertices are counted face by face, around each polygon.
@@ -33,8 +37,9 @@ const TOLERANCE_METERS = 1e-9;
  *   when the final faces leave a T-junction.
  * - Pure maths, with no DOM or GPU access.
  * @param design The design: `aspect`, `folds` and `id`.
- * @returns The sheet: `bridges`, `designId`, `faces`, `folds`,
- *   `heightMeters` and `widthMeters`.
+ * @returns The sheet: `bridges`, `centres`, one per stage from 0 (flat) to
+ *   the fold count, `designId`, `faces`, `folds`, `heightMeters` and
+ *   `widthMeters`.
  */
 export const cutSheet = (design) => {
   const { folds, id } = design;
@@ -66,6 +71,7 @@ export const cutSheet = (design) => {
 
   return {
     bridges: findBridges(faces),
+    centres: stageCentres(faces, folds),
     designId: id,
     faces: faces.map(({ movedBy, placements, polygon }, i) => ({
       layers: layers[i],
@@ -379,4 +385,41 @@ const stackLayers = (faces, foldCount) => {
   }
 
   return layers;
+};
+
+/** #### Finds the centre the paper slides to at each stage
+ * - The centre of the faces' bounding box in the folded plane, except
+ *   after a fold that turns both sides or stops short of 180°, which keeps
+ *   the stage before's: such a fold leaves the paper in a plane that the
+ *   bounding box does not describe.
+ * @param faces The final faces, each with `placements`.
+ * @param folds The design's folds.
+ * @returns Per stage, from 0 (flat) to the fold count, `[x, y]` in metres.
+ */
+const stageCentres = (faces, folds) => {
+  const centres = [];
+  for (let stage = 0; stage <= folds.length; stage++) {
+    const fold = folds[stage - 1];
+    if (stage > 0 && (fold.turns === "both-sides" || stopsShort(fold))) {
+      centres.push(centres[stage - 1]);
+      continue;
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const { placements, polygon } of faces) {
+      for (const point of polygon) {
+        const [x, y] = place(placements[stage], point);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    centres.push(Object.freeze([(minX + maxX) / 2, (minY + maxY) / 2]));
+  }
+
+  return centres;
 };

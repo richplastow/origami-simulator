@@ -26,15 +26,79 @@ const PAPER_FRONT_COLOR = 0xd9342b; // origami red
  *   strip is two triangles joining the edges of two faces at a crease.
  * - The front and back meshes share one geometry, whose positions are
  *   rewritten in place as the paper folds.
- * - The bounding sphere is set once, to hold the paper over its whole fold
- *   sequence.
+ * - The bounding sphere is set once per geometry, to hold the paper over
+ *   its whole fold sequence.
+ * - The meshes sit in an inner group, whose scale stretches the flat sheet
+ *   between two designs' shapes, so `group` stays free to turn.
  * @param radiusMeters The largest distance from the origin that the paper
- *   reaches over its fold sequence, from maxPaperRadius(), in metres.
+ *   reaches over every design's fold sequence, from maxPaperRadius(), in
+ *   metres.
  * @param sheet The sheet that cutSheet() returns.
- * @returns The `group` to add to the scene, and setSequencePosition(),
- *   which poses the paper along its fold sequence.
+ * @returns The `group` to add to the scene; `stretchScale`, the inner
+ *   group's `scale`, for writeStretchScale(); setSequencePosition(), which
+ *   poses the paper along its fold sequence; and setSheet(), which swaps
+ *   in another design's sheet.
  */
 export const createPaper = (radiusMeters, sheet) => {
+  let shown = createSheetGeometry(radiusMeters, sheet);
+  const meshes = [
+    new Mesh(shown.geometry, createPaperMaterial(PAPER_FRONT_COLOR, FrontSide)),
+    new Mesh(shown.geometry, createPaperMaterial(PAPER_BACK_COLOR, BackSide)),
+  ];
+  const stretchGroup = new Group();
+  stretchGroup.add(...meshes);
+  const group = new Group();
+  group.add(stretchGroup);
+
+  /** #### Poses the paper at a point in its fold sequence
+   * - Allocates nothing, so it is safe on the per-frame path.
+   * @param sequencePosition From 0 (flat) to the design's fold count.
+   */
+  const setSequencePosition = (sequencePosition) => {
+    writePaperPositions(shown.positions, sequencePosition, shown.sheet);
+    shown.positionAttribute.needsUpdate = true;
+  };
+
+  /** #### Swaps in another design's sheet, posed flat
+   * - Gives both meshes the new geometry, then disposes of the old one,
+   *   which frees its attributes on the GPU; the materials stay.
+   * - Allocates, so call it only when the design changes, at rest.
+   * @param nextSheet The sheet that cutSheet() returns for the new design.
+   */
+  const setSheet = (nextSheet) => {
+    const oldGeometry = shown.geometry;
+    shown = createSheetGeometry(radiusMeters, nextSheet);
+    for (const mesh of meshes) mesh.geometry = shown.geometry;
+    oldGeometry.dispose();
+  };
+
+  return {
+    group,
+    setSequencePosition,
+    setSheet,
+    stretchScale: stretchGroup.scale,
+  };
+};
+
+/** #### Creates a matte, flat-shaded material for one side of the paper
+ * - Flat shading derives each normal from screen-space derivatives, so it
+ *   faces the camera whichever side is showing.
+ * @param color The side's colour, as a hex number.
+ * @param side FrontSide or BackSide.
+ * @returns The material.
+ */
+const createPaperMaterial = (color, side) =>
+  new MeshLambertMaterial({ color, flatShading: true, side });
+
+/** #### Creates the geometry of a cut sheet, posed flat
+ * - Its bounding sphere, at the origin, holds every design's fold sequence,
+ *   so it is never recomputed.
+ * @param radiusMeters The bounding sphere's radius, in metres.
+ * @param sheet The sheet that cutSheet() returns.
+ * @returns The `geometry`, its `positionAttribute` and the `positions`
+ *   array behind it, and the `sheet` it was made from.
+ */
+const createSheetGeometry = (radiusMeters, sheet) => {
   const vertexCount = sheet.faces.reduce(
     (count, { polygon }) => count + polygon.length,
     0,
@@ -55,33 +119,8 @@ export const createPaper = (radiusMeters, sheet) => {
     .setIndex(createTriangleIndices(sheet));
   geometry.boundingSphere = new Sphere(new Vector3(), radiusMeters);
 
-  const group = new Group();
-  group.add(
-    new Mesh(geometry, createPaperMaterial(PAPER_FRONT_COLOR, FrontSide)),
-    new Mesh(geometry, createPaperMaterial(PAPER_BACK_COLOR, BackSide)),
-  );
-
-  /** #### Poses the paper at a point in its fold sequence
-   * - Allocates nothing, so it is safe on the per-frame path.
-   * @param sequencePosition From 0 (flat) to the design's fold count.
-   */
-  const setSequencePosition = (sequencePosition) => {
-    writePaperPositions(positions, sequencePosition, sheet);
-    positionAttribute.needsUpdate = true;
-  };
-
-  return { group, setSequencePosition };
+  return { geometry, positionAttribute, positions, sheet };
 };
-
-/** #### Creates a matte, flat-shaded material for one side of the paper
- * - Flat shading derives each normal from screen-space derivatives, so it
- *   faces the camera whichever side is showing.
- * @param color The side's colour, as a hex number.
- * @param side FrontSide or BackSide.
- * @returns The material.
- */
-const createPaperMaterial = (color, side) =>
-  new MeshLambertMaterial({ color, flatShading: true, side });
 
 /** #### Lists the vertex indices of every triangle of the paper
  * - Every triangle runs anticlockwise seen from the front of the paper, so

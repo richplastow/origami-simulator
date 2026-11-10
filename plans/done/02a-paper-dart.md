@@ -23,7 +23,7 @@ type: plan
   [Cutting the sheet from a fold list](../todo/02-simple-folds-research.md#cutting-the-sheet-from-a-fold-list),
   [Layer thickness](../todo/02-simple-folds-research.md#layer-thickness) and
   [Animation](../todo/02-simple-folds-research.md#animation) hold the evidence.
-- Feeds [Plan 02b](../todo/02b-paper-hat.md), the paper hat and switching between
+- Feeds [Plan 02b](./02b-paper-hat.md), the paper hat and switching between
   designs, then [Plan 02c](../todo/02c-printed-fold-lines.md), printed fold lines.
 - Three.js APIs below were checked against the
   [r187 source](https://github.com/mrdoob/three.js/tree/r187/src) on

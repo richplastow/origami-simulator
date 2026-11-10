@@ -11,7 +11,7 @@ type: plan
   folds and fade out once the paper lies flat again, so flat paper at
   rest is blank. A "Fold lines" checkbox, ticked at load, switches them
   off and on.
-- Depends on [Plan 02b](02b-paper-hat.md), and through it on
+- Depends on [Plan 02b](../done/02b-paper-hat.md), and through it on
   [Plan 02a](../done/02a-paper-dart.md): it extends `cutSheet()` in
   `docs/src/fold/engine.js`, `stepSequence()` in
   `docs/src/fold/stepper.js` with its stretch phase, and `createPaper()`
@@ -32,7 +32,7 @@ type: plan
 ## Definitions
 
 The terms of [Plan 02a](../done/02a-paper-dart.md#definitions) and
-[Plan 02b](02b-paper-hat.md#definitions) apply. Two more:
+[Plan 02b](../done/02b-paper-hat.md#definitions) apply. Two more:
 
 - **Crease pattern**: every line along which a design folds, drawn on the
   flat sheet, each marked valley or mountain as seen from the front.

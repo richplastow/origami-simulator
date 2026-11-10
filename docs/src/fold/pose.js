@@ -4,6 +4,7 @@
  * apart by the paper's thickness.
  */
 
+import { smoothstep } from "./easing.js";
 import { stopsShort } from "./engine.js";
 
 // About one sheet of 80 gsm paper; tuned by eye.
@@ -31,6 +32,9 @@ const point = new Float64Array(3);
  * - A fold whose `turns` is `"both-sides"` turns the whole paper back by
  *   half its angle, about its line, from then on, so the two sides share
  *   the turn.
+ * - After every turn, the paper slides by minus the sheet's stage centre,
+ *   easing from one stage's to the next with the fold, so each stage's
+ *   folded shape stays centred on the origin.
  * - Vertices run face by face, around each face's polygon.
  * - Allocates nothing, so it is safe on the per-frame path.
  * - Pure maths, with no DOM or GPU access.
@@ -41,7 +45,7 @@ const point = new Float64Array(3);
  * @param sheet The sheet that cutSheet() returns.
  */
 export const writePaperPositions = (positions, sequencePosition, sheet) => {
-  const { faces, folds } = sheet;
+  const { centres, faces, folds } = sheet;
   const foldIndex = Math.max(
     0,
     Math.min(Math.floor(sequencePosition), folds.length - 1),
@@ -50,6 +54,10 @@ export const writePaperPositions = (positions, sequencePosition, sheet) => {
   const progress = smoothstep(sequencePosition - foldIndex);
   const isFlatFold = !stopsShort(fold);
   const foldPivotLayers = isFlatFold ? 0 : pivotLayers(faces, fold, foldIndex);
+  const fromCentre = centres[foldIndex];
+  const toCentre = centres[foldIndex + 1];
+  const centreX = lerp(fromCentre[0], toCentre[0], progress);
+  const centreY = lerp(fromCentre[1], toCentre[1], progress);
 
   let vertex = 0;
   for (let f = 0; f < faces.length; f++) {
@@ -116,8 +124,9 @@ export const writePaperPositions = (positions, sequencePosition, sheet) => {
         rotateAboutLine((-turnSign(folds[j]) * foldRadians) / 2, folds[j], 0);
       }
 
-      positions[3 * vertex] = point[0];
-      positions[3 * vertex + 1] = point[1];
+      // Slide the paper to keep its folded shape centred.
+      positions[3 * vertex] = point[0] - centreX;
+      positions[3 * vertex + 1] = point[1] - centreY;
       positions[3 * vertex + 2] = point[2];
     }
   }
@@ -206,17 +215,6 @@ const pivotLayers = (faces, fold, foldIndex) => {
   }
 
   return pivot;
-};
-
-/** #### Eases a linear progress, slow at both ends and fastest midway
- * - The curve of r187's MathUtils.smoothstep(), `p² × (3 − 2p)`, written
- *   here so that Node can run this module without Three.js.
- * @param progress The linear progress, clamped to 0 to 1.
- * @returns The eased progress, from 0 to 1.
- */
-const smoothstep = (progress) => {
-  const p = Math.min(Math.max(progress, 0), 1);
-  return p * p * (3 - 2 * p);
 };
 
 /** #### Returns the direction a fold turns its moving side
