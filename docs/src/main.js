@@ -178,8 +178,11 @@ renderer.setAnimationLoop((timestampMs) => {
     paper.setSequencePosition(sequenceState.position);
     paper.setLinesVisibility(sequenceState.linesVisibility);
 
-    // Written on every change, so the scale ends on exactly 1.
+    // Written on every change, so the scale ends on exactly 1. Refit the
+    // grain after it, in this frame: setSheet() above fitted the grain to
+    // the scale written before.
     writeStretchScale(designs, paper.stretchScale, sequenceState);
+    paper.fitGrain();
   }
 
   // True on the step that reaches 1, so the fade ends on exactly its colour.

@@ -24,7 +24,7 @@ type: plan
   `docs/src/scene/paper.js` returns `group`, which holds the stretch
   group and is free to turn, and `docs/src/main.js` fits the camera to a
   sphere centred on the origin, so the paper stays in view at any angle.
-- Feeds [Plan 04](./04-paper-colours.md), [Plan 05](../todo/05-paper-grain.md) and
+- Feeds [Plan 04](./04-paper-colours.md), [Plan 05](./05-paper-grain.md) and
   [Plan 06](../todo/06-self-shadows.md), whose shadows show best on a spun dart.
 - Rests on
   [pointer events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events),

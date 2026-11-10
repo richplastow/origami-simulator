@@ -10,19 +10,19 @@ type: plan
   generated at load from seeded noise. There is no image file, so no
   asset and no licence to record.
 - Implements the polish rulings in
-  [Scope](../done/02-simple-folds-research.md#scope) of
-  [02-simple-folds-research.md](../done/02-simple-folds-research.md),
+  [Scope](./02-simple-folds-research.md#scope) of
+  [02-simple-folds-research.md](./02-simple-folds-research.md),
   and settles the rule that its
-  [Stretchy paper](../done/02-simple-folds-research.md#stretchy-paper)
+  [Stretchy paper](./02-simple-folds-research.md#stretchy-paper)
   section asks for: whether the grain stretches with the sheet, or
   holds still.
-- Depends on [Plan 02c](../done/02c-printed-fold-lines.md), whose `uv`
+- Depends on [Plan 02c](./02c-printed-fold-lines.md), whose `uv`
   attribute in `docs/src/scene/paper.js` holds each vertex's sheet
-  coordinates, and on [Plan 02b](../done/02b-paper-hat.md)'s stretch.
-  It follows [Plan 03](../done/03-spin-the-paper.md) and
-  [Plan 04](../done/04-paper-colours.md): its Manual QA spins the paper and
+  coordinates, and on [Plan 02b](./02b-paper-hat.md)'s stretch.
+  It follows [Plan 03](./03-spin-the-paper.md) and
+  [Plan 04](./04-paper-colours.md): its Manual QA spins the paper and
   changes its colour.
-- Feeds [Plan 06](06-self-shadows.md).
+- Feeds [Plan 06](../todo/06-self-shadows.md).
 - Three.js APIs below were checked against the
   [r187 source](https://github.com/mrdoob/three.js/tree/r187/src) on
   2026-11-10:
@@ -42,21 +42,24 @@ type: plan
    pure, returns the RGBA bytes of a square tile, `GRAIN_TEXTURE_PX` on
    a side.
    - Every pixel is grey and opaque, with the value
-     `255 × (1 − GRAIN_STRENGTH × n)`, where `n`, from 0 to 1, is the
-     mean of one layer of value noise for each entry of
-     `GRAIN_CELLS_PX`: random values on a grid of cells that many
-     texels wide, smoothly interpolated.
+     `255 × (1 − GRAIN_STRENGTH × n)`, rounded to the nearest whole
+     number, where `n`, from 0 to 1, is the mean of one layer of value
+     noise for each entry of `GRAIN_CELLS_PX`: random values on a grid
+     of cells that many texels wide, smoothly interpolated.
    - Each layer's grid wraps at the tile's edges, so the tile repeats
-     with no seam.
-   - The random values come from a small seeded generator, with
-     `GRAIN_SEED`, so every load shows the same grain and the checks
-     below can be repeated.
-   - The tuning values: `GRAIN_STRENGTH = 0.15`;
+     with no seam. Each entry of `GRAIN_CELLS_PX` must therefore divide
+     `GRAIN_TEXTURE_PX` exactly, retuned or not.
+   - The random values come from a small seeded generator, such as
+     mulberry32, with `GRAIN_SEED`, so every load shows the same grain
+     and the checks below can be repeated.
+   - The tuning values: `GRAIN_SEED = 1`; `GRAIN_STRENGTH = 0.15`;
      `GRAIN_TEXTURE_PX = 512`; `GRAIN_TILE_METERS = 0.128`, so a texel
      is 0.25 mm of paper; `GRAIN_CELLS_PX = [2, 4, 8]`, so the grain's
      features are 0.5, 1 and 2 mm across. All are open to tuning by eye
      at Manual QA 1. A prototype with these values took 10 ms and gave
-     bytes from 217 to 254, with a mean of 236 (2026-11-10).
+     bytes from 217 to 254, with a mean of 236 (2026-11-10); the review
+     reproduced those bytes, and Step 1's Agent QA 2 ratios, with
+     mulberry32 seeded with 1.
 3. **The texture**: `new DataTexture(pixels, GRAIN_TEXTURE_PX,
    GRAIN_TEXTURE_PX)`, whose format and type default to RGBA bytes. A
    DataTexture defaults to nearest-neighbour filtering with no mipmaps,
@@ -82,9 +85,13 @@ type: plan
      0.9854 × 1.3936 (computed 2026-11-10, with Decision 2's tile).
    - `paper.fitGrain()` sets the repeat from the sheet showing and the
      stretch scale, and allocates nothing. `createPaper()` and
-     `setSheet()` call it, and `docs/src/main.js` calls it after each
-     `writeStretchScale()`. A texture's matrix follows its `repeat` by
-     itself, since `matrixAutoUpdate` defaults to true.
+     `setSheet()` call it, and `docs/src/main.js` calls it straight
+     after its `writeStretchScale()` call, in the same frame: on the
+     frame of a swap, `setSheet()` runs before the stretch scale is
+     written, so only the later call leaves the repeat right before the
+     render. A texture's matrix follows its `repeat` by itself, since
+     `matrixAutoUpdate` defaults to true and the renderer refreshes each
+     material's uniforms on every frame.
 5. **Performance**: the tile is generated and uploaded once, at load,
    about 1.4 MB with its mipmaps (derived: 512 × 512 × 4 bytes, plus a
    third); a frame of a stretch writes two numbers; each pixel of
@@ -106,6 +113,8 @@ type: plan
   swapped in, and that follows the stretch (Agent QA 3).
 - It should import nothing from Three.js, so Node can run it
   (Agent QA 4).
+- It should give the bytes Decision 2 records, from every layer of
+  noise, rounded (Agent QA 5).
 
 **Agent QA**
 
@@ -121,12 +130,18 @@ type: plan
    it, the first two pairs are still equal)
 4. Do: `grep -c '"three"' docs/src/scene/grain.js`
    Expect: `0`
+5. Do: `node --input-type=module -e 'import { createGrainPixels } from "./docs/src/scene/grain.js"; const p = createGrainPixels(); let low = 255, high = 0, sum = 0; for (let i = 0; i < p.length; i += 4) { low = Math.min(low, p[i]); high = Math.max(high, p[i]); sum += p[i]; } console.log(low, high, Math.round(sum / (p.length / 4)));'`
+   Expect: `217 254 236` (the lowest and highest bytes and the mean, with
+   Decision 2's tuning values: one layer alone gives `242 255 249`, and
+   `Math.floor()` for `Math.round()` a mean of `235`; should Manual QA 1
+   retune them, record the new figures here)
 
 ### Step 2: The grain on the paper
 
 - Changes `docs/src/scene/paper.js`: the grain texture, as the `map` of
   the front and back materials, and `fitGrain()`, called at creation
-  and in `setSheet()` (Decisions 1, 3, 4).
+  and in `setSheet()`, and returned beside the other setters, with
+  `createPaper()`'s `@returns` naming it (Decisions 1, 3, 4).
 - Changes `docs/src/main.js`: `paper.fitGrain()` after each
   `writeStretchScale()` (Decision 4).
 - It should show a subtle grain on both sides of the paper, with no
@@ -143,8 +158,11 @@ type: plan
 
 **Agent QA**
 
-1. Do: `grep -c 'RepeatWrapping\|LinearMipmapLinearFilter\|generateMipmaps = true\|needsUpdate = true' docs/src/scene/paper.js`
-   Expect: `4` or more
+1. Do: `for p in 'center.set(0.5, 0.5)' 'generateMipmaps = true' 'magFilter = LinearFilter' 'minFilter = LinearMipmapLinearFilter' 'texture.needsUpdate = true' 'wrapS = ' 'wrapT = '; do printf '%s: ' "$p"; grep -cF -- "$p" docs/src/scene/paper.js; done`
+   Expect: a count of `1` or more on every line (each setting of
+   Decisions 3 and 4 is present; one grep over all of them would also
+   count the import lines, and a bare `needsUpdate = true` would also
+   count the position attribute's)
 2. Do: `git status --short docs/assets docs/vendor`
    Expect: prints nothing
 3. Do: `grep -c 'fitGrain' docs/src/scene/paper.js docs/src/main.js`
@@ -167,12 +185,13 @@ tuning values kept or retuned by eye at Manual QA 1.
 `http://localhost:1111/` in desktop Chrome, open the dev tools console, and
 hard-reload (Shift+Cmd+R).
 
-1. **Do:** look at the flat sheet, then zoom to 300% (Cmd and +), look
-   closely about a centimetre inside each edge, and reset the zoom
-   (Cmd and 0).
-   - **Expect:** at 100%, a faint, even mottling that reads as paper,
-     not as a pattern. At 300%, soft irregular specks from half a
-     millimetre to two millimetres across, with no grid, and no
+1. **Do:** look at the flat sheet, then pinch out on the trackpad to
+   magnify the page about threefold, look closely about a centimetre
+   inside each edge, and pinch back in. Not Cmd and +: the camera
+   re-fits the window, so browser zoom magnifies nothing.
+   - **Expect:** unmagnified, a faint, even mottling that reads as
+     paper, not as a pattern. Magnified, soft irregular specks from
+     half a millimetre to two millimetres across, with no grid, and no
      straight line where the grain breaks. The console shows no errors
      or warnings.
    - **Why:** the tile's edges fall 11 mm inside the square's edges,
@@ -186,7 +205,8 @@ hard-reload (Shift+Cmd+R).
      smears during it: it holds still at the sheet's centre while the
      outline changes shape round it.
    - **Why:** a repeat set for the new sheet alone makes the grain jump
-     by a fifth at the swap.
+     at the swap, coarser by about a fifth across and finer by about a
+     sixth down.
 4. **Do:** drag slowly to turn the folded hat through a full turn, and
    to both tilt limits.
    - **Expect:** the grain stays steady at every angle, glancing ones
@@ -205,8 +225,9 @@ hard-reload (Shift+Cmd+R).
    Sources, set a breakpoint on the line of `src/main.js` that calls
    `renderer.render(scene, camera)`; when it pauses, read
    `renderer.info.memory.textures` in the console, then remove the
-   breakpoint and resume. Switch designs three times, and read it
-   again.
+   breakpoint and resume. Switch designs three times ("Paper Hat",
+   "Paper Dart", "Paper Hat"), letting each finish, then read it again
+   the same way.
    - **Expect:** 2 both times (derived: the grain and the fold lines).
 8. **Do:** in the Performance panel, record a switch from the dart to
    the hat. Then open the live site,
@@ -238,3 +259,61 @@ hard-reload (Shift+Cmd+R).
   colour map with no bump, at strength 0.15, on a 512 px tile of
   128 mm with cells of 2, 4 and 8 px; and a grain that holds still at
   its true size while the sheet stretches.
+- **2026-11-10T12:07:48Z** — **reviewed**: no Major finding; r187
+  source confirms DataTexture's nearest, no-mipmap defaults, Texture's
+  RGBA bytes and
+  NoColorSpace, setUvTransform() as `repeat × (uv − centre) + centre`,
+  Lambert's per-frame map transform and the texture count; a scratch
+  run against the real `uv` and flat pose confirmed the grain holds
+  still and Decision 4's repeats, 11 mm and 1.4 MB; fixed: rounding,
+  `GRAIN_SEED = 1` and cells dividing the tile (Decision 2), the swap
+  frame's call order (Decision 4), `fitGrain()` in `@returns`, a
+  per-setting Agent QA grep, pinch rather than Cmd and + in Manual QA
+  1, the jump's size in Manual QA 3, and the switches in Manual QA 7.
+- **2026-11-10T12:11:37Z** — **implemented**: Step 1, new
+  `docs/src/scene/grain.js` (Decision 2's constants, mulberry32 seeded
+  with 1, `createGrainPixels()`, `grainRepeat()`; no `three` import);
+  Step 2, `docs/src/scene/paper.js` (grain DataTexture as both sides'
+  `map`, `fitGrain()` at creation, in `setSheet()` and returned;
+  fileoverview and `@returns` updated) and `docs/src/main.js`
+  (`paper.fitGrain()` after `writeStretchScale()`, same `if` block);
+  r187 source rechecked; Step 1 Agent QA 1 to 4 pass (bytes 217 to 254,
+  mean 236, wrap ratios 0.88 and 0.86, 8 ms); Step 2 Agent QA 1 to 3
+  pass; Step 2 Agent QA 1's `needsUpdate = true` passed before the work,
+  on the position attribute, so it now greps
+  `texture.needsUpdate = true`; Manual QA walked, unchanged.
+- **2026-11-10T12:11:37Z** — **verified**: agent checks pass: 19 modules
+  parse, no long lines, `/`, `styles/main.css` and all 19 modules served
+  200 (server started and stopped by the check), vendored checksums
+  match; browser not run.
+- **2026-11-10T12:15:57Z** — **quality-checked**: Fixed: a check gap,
+  where mutants of `createGrainPixels()` using one layer of noise
+  (bytes 242 to 255) or `Math.floor()` (mean 235) passed every Agent
+  QA line, so Step 1 gained Agent QA 5 (`217 254 236`) and a matching
+  bullet (plan); first-run polish, `grainRepeat()`’s doc comment says
+  "as shown" for "on screen" (`grain.js`); Deferred: none; Verified
+  fine: mutation tests of `grain.js` (wrap dropped on either axis,
+  sign reversed, no layer mean, unseeded, stretch ignored or divided,
+  one axis’s ease for both, blue channel 255 all caught; linear rather
+  than smoothstep interpolation passes every Agent QA line as an
+  equivalent mutant there, left to Manual QA 1’s "no grid"; restored,
+  `shasum` matched); Three.js sweep: the grain texture and both paper
+  materials live as long as the page, the lines texture and old
+  geometry are still disposed of in `setSheet()`; the per-frame path
+  through `fitGrain()` and grainRepeat() allocates nothing; the swap
+  frame runs `setSheet()`, writeStretchScale(), then `fitGrain()`
+  before `renderer.render()`; motion, resize and input untouched; r187
+  source rechecked for DataTexture’s nearest, no-mipmap defaults,
+  Texture’s `updateMatrix()` and defaults, `refreshTransformUniform()`
+  for Lambert’s `map`, and `_currentMaterialId` reset after each
+  render, so the map’s transform refreshes every frame; no shadows, so
+  Manual QA 7’s count of 2 holds; `setSheet()`’s own `fitGrain()` call
+  is kept as Decision 4 asks; Step 1 Agent QA 1 to 5 and Step 2 Agent
+  QA 1 to 4 pass; Manual QA walked against the labels and maths,
+  unchanged; agent checks pass (19 modules, no long lines, all served
+  200 by a server started and stopped, checksums match); browser not
+  run.
+- **2026-11-10T12:20:56Z** — **done**: manual QA passed in the browser
+  (the grain's look, its stillness through the stretch, no shimmer, every
+  colour, sharp fold lines), with Decision 2's tuning values kept; the
+  optional Manual QA 7 and 8 were skipped; moved to `plans/done/`.

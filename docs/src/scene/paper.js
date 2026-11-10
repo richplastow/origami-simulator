@@ -1,8 +1,8 @@
 /**
  * @fileoverview
- * The paper sheet: a two-tone, flat-shaded mesh, posed along its design's
- * fold sequence, with its crease pattern printed on the front, whose colour
- * fades to another on request.
+ * The paper sheet: a two-tone, flat-shaded mesh with a fine grain on both
+ * sides, posed along its design's fold sequence, with its crease pattern
+ * printed on the front, whose colour fades to another on request.
  */
 
 import {
@@ -11,12 +11,16 @@ import {
   BufferGeometry,
   CanvasTexture,
   Color,
+  DataTexture,
   DynamicDrawUsage,
   FrontSide,
   Group,
+  LinearFilter,
+  LinearMipmapLinearFilter,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
+  RepeatWrapping,
   SRGBColorSpace,
   Sphere,
   Vector3,
@@ -24,6 +28,7 @@ import {
 import { smoothstep } from "../fold/easing.js";
 import { writePaperPositions } from "../fold/pose.js";
 import { drawFoldLines } from "./fold-lines.js";
+import { createGrainPixels, GRAIN_TEXTURE_PX, grainRepeat } from "./grain.js";
 
 const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
 
@@ -43,6 +48,11 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  * - The front's colour fades from the one showing to another through two
  *   scratch colours, mixed in Three.js's working colour space; the back's
  *   never changes.
+ * - One grain texture is the `map` of both sides, multiplying each side's
+ *   colour. Its repeat follows the sheet's size and stretch, centred on the
+ *   sheet's centre, so the grain keeps its true size and holds still while
+ *   the sheet changes shape. It lives as long as the page, so it is never
+ *   disposed of.
  * @param frontColor The front's colour at creation, as a hex number in
  *   sRGB.
  * @param radiusMeters The largest distance from the origin that the paper
@@ -50,11 +60,13 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   metres.
  * @param sheet The sheet that cutSheet() returns.
  * @returns The `group` to add to the scene; `stretchScale`, the inner
- *   group's `scale`, for writeStretchScale(); startFrontColorFade(), which
- *   sets the front's next colour, and setFrontColorFade(), which fades the
- *   front towards it; setLinesVisibility(), which fades the fold lines;
- *   setSequencePosition(), which poses the paper along its fold sequence;
- *   and setSheet(), which swaps in another design's sheet.
+ *   group's `scale`, for writeStretchScale(); fitGrain(), which fits the
+ *   grain to the sheet's size and stretch, to call after each
+ *   writeStretchScale(); startFrontColorFade(), which sets the front's next
+ *   colour, and setFrontColorFade(), which fades the front towards it;
+ *   setLinesVisibility(), which fades the fold lines; setSequencePosition(),
+ *   which poses the paper along its fold sequence; and setSheet(), which
+ *   swaps in another design's sheet.
  */
 export const createPaper = (frontColor, radiusMeters, sheet) => {
   let shown = createSheetGeometry(radiusMeters, sheet);
@@ -68,10 +80,20 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   });
   const linesMesh = new Mesh(shown.geometry, linesMaterial);
   linesMesh.visible = false;
-  const frontMaterial = createPaperMaterial(frontColor, FrontSide);
+  const grainTexture = createGrainTexture();
+  const frontMaterial = createPaperMaterial(
+    frontColor,
+    grainTexture,
+    FrontSide,
+  );
+  const backMaterial = createPaperMaterial(
+    PAPER_BACK_COLOR,
+    grainTexture,
+    BackSide,
+  );
   const meshes = [
     new Mesh(shown.geometry, frontMaterial),
-    new Mesh(shown.geometry, createPaperMaterial(PAPER_BACK_COLOR, BackSide)),
+    new Mesh(shown.geometry, backMaterial),
     linesMesh,
   ];
   const stretchGroup = new Group();
@@ -84,6 +106,21 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   // nothing.
   const fadeFromColor = new Color(frontColor);
   const fadeToColor = new Color(frontColor);
+
+  /** #### Fits the grain's repeat to the sheet showing and its stretch
+   * - Sets each axis's repeat to the sheet's stretched size in tiles, so a
+   *   millimetre of grain is a millimetre of paper whatever the sheet's
+   *   shape, and a sheet swapped in shows the same grain as the one before.
+   * - The texture's matrix follows its `repeat` by itself, as the renderer
+   *   refreshes it on every frame.
+   * - Allocates nothing, so it is safe on the per-frame path.
+   */
+  const fitGrain = () => {
+    grainTexture.repeat.set(
+      grainRepeat(shown.sheet.widthMeters, stretchGroup.scale.x),
+      grainRepeat(shown.sheet.heightMeters, stretchGroup.scale.y),
+    );
+  };
 
   /** #### Mixes the front's colour, eased, from the fade's start to its end
    * - Allocates nothing, so it is safe on the per-frame path.
@@ -123,6 +160,8 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
    *   a new texture of it, and disposes of the old texture: a texture's
    *   storage is allocated on its first upload, so it cannot take a
    *   canvas of another size.
+   * - Refits the grain to the new sheet, at the stretch scale written so
+   *   far; call fitGrain() again once the new stretch scale is written.
    * - Allocates, so call it only when the design changes, at rest, with
    *   the fold lines hidden.
    * @param nextSheet The sheet that cutSheet() returns for the new design.
@@ -137,6 +176,8 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
     drawFoldLines(linesCanvas, nextSheet);
     linesMaterial.map = createLinesTexture(linesCanvas);
     oldTexture.dispose();
+
+    fitGrain();
   };
 
   /** #### Starts the front's fade from the colour showing to another
@@ -152,7 +193,10 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
     fadeToColor.setHex(color);
   };
 
+  fitGrain();
+
   return {
+    fitGrain,
     group,
     setFrontColorFade,
     setLinesVisibility,
@@ -161,6 +205,32 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
     startFrontColorFade,
     stretchScale: stretchGroup.scale,
   };
+};
+
+/** #### Creates the grain texture, a seamless tile repeated across the paper
+ * - DataTexture defaults to nearest filtering with no mipmaps, which would
+ *   shimmer as the paper turns, so it filters linearly between mipmaps.
+ * - Its colour space stays NoColorSpace: the grain multiplies a colour,
+ *   and is not one itself.
+ * - Its `center` is the tile's centre, so the transform is
+ *   `repeat × (uv − 0.5) + 0.5` and the sheet's centre shows the tile's.
+ * @returns The texture, set to upload on its first use.
+ */
+const createGrainTexture = () => {
+  const texture = new DataTexture(
+    createGrainPixels(),
+    GRAIN_TEXTURE_PX,
+    GRAIN_TEXTURE_PX,
+  );
+  texture.center.set(0.5, 0.5);
+  texture.generateMipmaps = true;
+  texture.magFilter = LinearFilter;
+  texture.minFilter = LinearMipmapLinearFilter;
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.needsUpdate = true;
+
+  return texture;
 };
 
 /** #### Creates a colour texture of a canvas holding fold lines
@@ -179,11 +249,12 @@ const createLinesTexture = (canvas) => {
  * - Flat shading derives each normal from screen-space derivatives, so it
  *   faces the camera whichever side is showing.
  * @param color The side's colour, as a hex number.
+ * @param map The grain texture, which multiplies the colour.
  * @param side FrontSide or BackSide.
  * @returns The material.
  */
-const createPaperMaterial = (color, side) =>
-  new MeshLambertMaterial({ color, flatShading: true, side });
+const createPaperMaterial = (color, map, side) =>
+  new MeshLambertMaterial({ color, flatShading: true, map, side });
 
 /** #### Creates the geometry of a cut sheet, posed flat
  * - Its bounding sphere, at the origin, holds every design's fold sequence,

@@ -22,7 +22,7 @@ type: plan
 - Depends on [Plan 02c](../done/02c-printed-fold-lines.md) and on
   [Plan 03](../done/03-spin-the-paper.md), whose spin shows the shadows best.
   It follows [Plan 04](../done/04-paper-colours.md) and
-  [Plan 05](05-paper-grain.md), which it must leave as they are.
+  [Plan 05](../done/05-paper-grain.md), which it must leave as they are.
 - Rests on Three.js's
   [shadows manual](https://threejs.org/manual/#en/shadows). Three.js
   APIs below were checked against the

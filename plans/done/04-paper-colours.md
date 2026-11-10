@@ -19,7 +19,7 @@ type: plan
 - Depends on [Plan 02c](./02c-printed-fold-lines.md), whose fold lines
   must stay readable and whose checkbox shares the control bar. It
   follows [Plan 03](./03-spin-the-paper.md) but needs nothing from it.
-- Feeds [Plan 05](../todo/05-paper-grain.md), whose grain multiplies whichever
+- Feeds [Plan 05](./05-paper-grain.md), whose grain multiplies whichever
   colour is showing.
 - Rests on
   [radio inputs](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/radio),
