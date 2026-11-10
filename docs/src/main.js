@@ -1,12 +1,12 @@
 /**
  * @fileoverview
- * Entry point: draws a lit sheet of paper on a transparent canvas, and
- * folds it into the paper dart or the paper hat, or back to flat, as the
- * buttons choose, stretching the flat sheet from one design's shape to the
- * other's between them, with each design's fold lines printed on it while
- * the "Fold lines" checkbox is ticked, fades its front to the colour the
- * swatches choose, and turns it like a turntable as a drag on the canvas
- * moves.
+ * Entry point: draws a lit sheet of paper, which shadows itself, on a
+ * transparent canvas, and folds it into the paper dart or the paper hat, or
+ * back to flat, as the buttons choose, stretching the flat sheet from one
+ * design's shape to the other's between them, with each design's fold lines
+ * printed on it while the "Fold lines" checkbox is ticked, fades its front to
+ * the colour the swatches choose, and turns it like a turntable as a drag on
+ * the canvas moves.
  */
 
 import {
@@ -63,6 +63,10 @@ const paperRadiusMeters = Math.max(
 
 // An `alpha` canvas clears to transparent, so the page shows through.
 const renderer = new WebGLRenderer({ alpha: true, antialias: true, canvas });
+
+// The paper shadows itself, and only itself: the scene holds nothing else.
+renderer.shadowMap.enabled = true;
+
 const scene = new Scene();
 const camera = new PerspectiveCamera(
   CAMERA_FOV_DEGREES,
@@ -108,7 +112,7 @@ let shownDesignId = sequenceState.designId;
 // The paper's turntable spin, which only a reload resets.
 const spin = { pitchRadians: 0, yawRadians: 0 };
 
-scene.add(paper.group, ...createLights());
+scene.add(paper.group, ...createLights(paperRadiusMeters));
 
 /** #### Matches the camera and drawing buffer to the canvas's CSS size
  * - The camera keeps its elevation and moves along its line of sight, so

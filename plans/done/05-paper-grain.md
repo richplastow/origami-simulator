@@ -22,7 +22,7 @@ type: plan
   It follows [Plan 03](./03-spin-the-paper.md) and
   [Plan 04](./04-paper-colours.md): its Manual QA spins the paper and
   changes its colour.
-- Feeds [Plan 06](../todo/06-self-shadows.md).
+- Feeds [Plan 06](./06-self-shadows.md).
 - Three.js APIs below were checked against the
   [r187 source](https://github.com/mrdoob/three.js/tree/r187/src) on
   2026-11-10:

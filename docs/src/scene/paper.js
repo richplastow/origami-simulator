@@ -12,6 +12,7 @@ import {
   CanvasTexture,
   Color,
   DataTexture,
+  DoubleSide,
   DynamicDrawUsage,
   FrontSide,
   Group,
@@ -41,6 +42,10 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   canvas, on the front only, through UVs that follow sheet coordinates.
  *   Unlit and transparent, it draws over the front mesh, whose depth it
  *   matches. It starts hidden, so its texture uploads only once shown.
+ * - The front mesh alone casts shadows, the whole sheet both ways up, and
+ *   the front and back meshes receive them, so the paper shadows itself.
+ *   The fold-line mesh neither casts nor receives: it is unlit, and its
+ *   lines are black already.
  * - The bounding sphere is set once per geometry, to hold the paper over
  *   its whole fold sequence.
  * - The meshes sit in an inner group, whose scale stretches the flat sheet
@@ -91,11 +96,16 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
     grainTexture,
     BackSide,
   );
-  const meshes = [
-    new Mesh(shown.geometry, frontMaterial),
-    new Mesh(shown.geometry, backMaterial),
-    linesMesh,
-  ];
+
+  // Left at null, a FrontSide material casts with its back faces only, so
+  // draw the whole sheet into the shadow map, both ways up, from the front.
+  frontMaterial.shadowSide = DoubleSide;
+  const frontMesh = new Mesh(shown.geometry, frontMaterial);
+  frontMesh.castShadow = true;
+  frontMesh.receiveShadow = true;
+  const backMesh = new Mesh(shown.geometry, backMaterial);
+  backMesh.receiveShadow = true;
+  const meshes = [frontMesh, backMesh, linesMesh];
   const stretchGroup = new Group();
   stretchGroup.add(...meshes);
   const group = new Group();
