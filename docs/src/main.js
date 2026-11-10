@@ -3,10 +3,11 @@
  * Entry point: draws a lit sheet of paper, which shadows itself, on a
  * transparent canvas, and folds it into the design a button chooses, turning
  * it over where the design says, or back to flat, stretching the flat sheet
- * from one design's shape to the next's between them, with each design's
- * fold lines printed on it while the "Fold lines" checkbox is ticked, fades
- * its front to the colour the swatches choose, and turns it like a turntable
- * as a drag on the canvas moves.
+ * from one design's shape to the next's between them while turning it to
+ * the next's starting pose, with each design's fold lines printed on it
+ * while the "Fold lines" checkbox is ticked, fades its front to the colour
+ * the swatches choose, and turns it like a turntable as a drag on the
+ * canvas moves.
  */
 
 import {
@@ -18,7 +19,7 @@ import {
 } from "three";
 import { distanceToFitSphere } from "./camera/fit.js";
 import { DESIGNS } from "./designs/list.js";
-import { writeStretchScale } from "./designs/sheet.js";
+import { writeStartPose, writeStretchScale } from "./designs/sheet.js";
 import { cutSheet } from "./fold/engine.js";
 import { maxPaperRadius } from "./fold/pose.js";
 import { stepSequence } from "./fold/stepper.js";
@@ -183,10 +184,12 @@ renderer.setAnimationLoop((timestampMs) => {
     paper.setSequencePosition(sequenceState.position);
     paper.setLinesVisibility(sequenceState.linesVisibility);
 
-    // Written on every change, so the scale ends on exactly 1. Refit the
-    // grain after it, in this frame: setSheet() above fitted the grain to
-    // the scale written before.
+    // Written on every change, so the scale ends on exactly 1 and the pose
+    // on exactly the design's start. Refit the grain after the scale, in
+    // this frame: setSheet() above fitted the grain to the scale written
+    // before.
     writeStretchScale(designs, paper.stretchScale, sequenceState);
+    writeStartPose(designs, paper.startRotation, sequenceState);
     paper.fitGrain();
   }
 

@@ -3,7 +3,7 @@
  * Cuts a design's sheet into the faces its folds make, once, at load.
  */
 
-import { sheetSize } from "../designs/sheet.js";
+import { sheetSize, startOf } from "../designs/sheet.js";
 
 const IDENTITY_PLACEMENT = Object.freeze([1, 0, 0, 1, 0, 0]);
 
@@ -17,9 +17,9 @@ const TOLERANCE_METERS = 1e-9;
 
 /** #### Cuts a design's sheet into faces by running each of its folds once
  * - Reads the design's steps first, turning each fold from the view frame,
- *   as the viewer sees the paper at that step, into the front's terms, as
- *   readSteps() sets out. A turn-over folds nothing, so leaves the faces as
- *   they are.
+ *   as the viewer sees the paper at that step, from its starting pose and
+ *   the turn-overs before it, into the front's terms, as readSteps() sets
+ *   out. A turn-over folds nothing, so leaves the faces as they are.
  * - Each fold splits the faces it selects along its line, reflects the
  *   pieces to the line's left across it, and stacks them, in reverse
  *   order, above every face for a valley or below every face for a
@@ -30,9 +30,10 @@ const TOLERANCE_METERS = 1e-9;
  *   `placements`, `[a, b, c, d, tx, ty]` for `x' = a·x + c·y + tx`,
  *   `y' = b·x + d·y + ty`, into the folded plane as seen from the front,
  *   and its `layers`, counted from 1 at the back.
- * - Each stage's centre, `[x, y]` in metres, is the centre of the faces'
- *   bounding box in the folded plane at that stage, as seen from the
- *   front, so the paper can slide to stay centred. A fold that turns both
+ * - Each stage's centre, `[x, y]` in metres in the folded plane as seen
+ *   from the front, is the centre of the faces' bounding box as the viewer
+ *   sees them in the starting pose, turned back into the folded plane, so
+ *   the paper can slide to stay centred on screen. A fold that turns both
  *   sides, or stops short of 180°, keeps the centre it starts with, so its
  *   stage repeats the one before.
  * - Each bridge is a quad of vertex indices, `[a0, a1, b0, b1]`, joining
@@ -44,6 +45,9 @@ const TOLERANCE_METERS = 1e-9;
  *   the front's terms, or the opposite when the face lies face down before
  *   the fold. Lines are not merged, so a fold through several layers gives
  *   several.
+ * - Throws, naming the design, before any fold runs, when its `start` has
+ *   a `side` other than `"front"` or `"back"`, or a `rollRadians` that is
+ *   not a finite number, as startFrame() sets out.
  * - Throws, naming the design and a step by its index in `steps`, before
  *   any fold runs, when a step's `kind` is unknown and when a fold's
  *   `layers` name a step that is not a fold; and, as the folds run, when a
@@ -51,8 +55,9 @@ const TOLERANCE_METERS = 1e-9;
  *   followed by a fold that moves its faces. Throws, naming the design,
  *   when the final faces leave a T-junction.
  * - Pure maths, with no DOM or GPU access.
- * @param design The design: `aspect`, `id` and `steps`, each a fold, in
- *   the view frame, or a turn-over.
+ * @param design The design: `aspect`; `id`; an optional `start`, its
+ *   starting pose, as startOf() reads it; and `steps`, each a fold, in the
+ *   view frame, or a turn-over.
  * @returns The sheet: `bridges`; `centres`, one per stage from 0 (flat) to
  *   the fold count; `creaseLines`; `designId`; `faces`; `folds`, in the
  *   front's terms, whose `layers` name a fold by its index in `folds`;
@@ -62,7 +67,8 @@ const TOLERANCE_METERS = 1e-9;
  */
 export const cutSheet = (design) => {
   const { id } = design;
-  const { folds, stepIndices, steps } = readSteps(design);
+  const frame = startFrame(design);
+  const { folds, stepIndices, steps } = readSteps(design, frame);
   const { heightMeters, widthMeters } = sheetSize(design.aspect);
   const halfWidth = widthMeters / 2;
   const halfHeight = heightMeters / 2;
@@ -95,7 +101,7 @@ export const cutSheet = (design) => {
 
   return {
     bridges: findBridges(faces),
-    centres: stageCentres(faces, folds),
+    centres: stageCentres(faces, folds, frame),
     creaseLines,
     designId: id,
     faces: faces.map(({ movedBy, placements, polygon }, i) => ({
@@ -323,6 +329,27 @@ const findBridges = (faces) => {
   return bridges;
 };
 
+/** #### Turns a point from the view frame into the folded plane's front terms
+ * - Undoes, in reverse order, the moves that give the view frame: each
+ *   turn-over's mirror, left to right; the roll; and the start's mirror,
+ *   if the back is towards the viewer.
+ * - With no roll, the arithmetic is exact, so a point seen from the front
+ *   comes back as written.
+ * @param frame The starting pose's view frame, from startFrame().
+ * @param point The point as the viewer sees it, `[x, y]` in metres.
+ * @param turnOvers The number of turn-overs done before it.
+ * @returns The point in the folded plane, seen from the front, `[x, y]`
+ *   in metres, frozen.
+ */
+const fromViewFrame = (frame, [x, y], turnOvers) => {
+  const { cos, isBack, sin } = frame;
+  const seenX = turnOvers % 2 === 0 ? x : -x;
+  const unrolledX = seenX * cos + y * sin;
+  const unrolledY = y * cos - seenX * sin;
+
+  return Object.freeze([isBack ? -unrolledX : unrolledX, unrolledY]);
+};
+
 /** #### Returns true if any face's corner lies part-way along another's edge
  * @param faces The final faces.
  * @returns True if the faces leave a T-junction.
@@ -416,20 +443,25 @@ const pointBetween = (point, next, s, t) => {
 /** #### Reads a design's steps into its folds, in the front's terms
  * - Checks every step before any fold runs: its `kind`, and, for a fold
  *   that selects its layers, that its `layers` name a fold.
- * - A fold made after an odd number of turn-overs is seen from the back,
- *   whose view frame mirrors the front's left to right. Its ends' `x` are
- *   negated and its ends swapped, so the same side lies to its line's
- *   left, and its type is made the opposite, since towards the viewer is
- *   then away from the front. A fold seen from the front is used as
- *   written.
+ * - The view frame at a fold is the starting pose's, mirrored left to
+ *   right by each turn-over before it. A fold's ends come back through the
+ *   same moves in reverse, as fromViewFrame() sets out: the turn-overs'
+ *   mirror undone, then the roll, then the start's mirror, if the back is
+ *   towards the viewer.
+ * - A fold is seen from the back when the start's side and the turn-overs
+ *   before it, together, mirror the front an odd number of times. Its ends
+ *   are then swapped, so the same side lies to its line's left, and its
+ *   type is made the opposite, since towards the viewer is then away from
+ *   the front.
  * - Each fold's `layers` turn from naming a step to naming a fold, by its
  *   index in `folds`.
  * @param design The design: `id` and `steps`.
+ * @param frame The starting pose's view frame, from startFrame().
  * @returns `folds`, frozen, in the front's terms; `stepIndices`, each
  *   fold's index in the design's `steps`; and `steps`, frozen, one per
  *   step, each with `foldsBefore`, `kind` and `turnOversBefore`.
  */
-const readSteps = (design) => {
+const readSteps = (design, frame) => {
   const { id } = design;
   const foldIndices = []; // per step, its index in `folds`, if a fold
   const stepIndices = [];
@@ -460,15 +492,17 @@ const readSteps = (design) => {
   const folds = stepIndices.map((stepIndex) => {
     const fold = design.steps[stepIndex];
     const layers = toFoldLayers(design, fold.layers, foldIndices, stepIndex);
-    if (steps[stepIndex].turnOversBefore % 2 === 0) {
-      return Object.freeze({ ...fold, layers });
-    }
+    const { turnOversBefore } = steps[stepIndex];
+    const from = fromViewFrame(frame, fold.from, turnOversBefore);
+    const to = fromViewFrame(frame, fold.to, turnOversBefore);
+    const mirrors = turnOversBefore + (frame.isBack ? 1 : 0);
+    if (mirrors % 2 === 0) return Object.freeze({ ...fold, from, layers, to });
 
     return Object.freeze({
       ...fold,
-      from: Object.freeze([-fold.to[0], fold.to[1]]),
+      from: to,
       layers,
-      to: Object.freeze([-fold.from[0], fold.from[1]]),
+      to: from,
       type: oppositeType(fold.type),
     });
   });
@@ -546,15 +580,20 @@ const stackLayers = (faces, foldCount) => {
 };
 
 /** #### Finds the centre the paper slides to at each stage
- * - The centre of the faces' bounding box in the folded plane, except
- *   after a fold that turns both sides or stops short of 180°, which keeps
- *   the stage before's: such a fold leaves the paper in a plane that the
- *   bounding box does not describe.
+ * - The centre of the faces' bounding box as the viewer sees them in the
+ *   starting pose, turned back into the folded plane, except after a fold
+ *   that turns both sides or stops short of 180°, which keeps the stage
+ *   before's: such a fold leaves the paper in a plane that the bounding
+ *   box does not describe.
+ * - A turn-over mirrors the view about its upright axis, through the
+ *   origin, so it moves the box's centre exactly as it moves the paper.
  * @param faces The final faces, each with `placements`.
  * @param folds The design's folds.
- * @returns Per stage, from 0 (flat) to the fold count, `[x, y]` in metres.
+ * @param frame The starting pose's view frame, from startFrame().
+ * @returns Per stage, from 0 (flat) to the fold count, `[x, y]` in metres
+ *   in the folded plane, as seen from the front.
  */
-const stageCentres = (faces, folds) => {
+const stageCentres = (faces, folds, frame) => {
   const centres = [];
   for (let stage = 0; stage <= folds.length; stage++) {
     const fold = folds[stage - 1];
@@ -569,17 +608,49 @@ const stageCentres = (faces, folds) => {
     let maxY = -Infinity;
     for (const { placements, polygon } of faces) {
       for (const point of polygon) {
-        const [x, y] = place(placements[stage], point);
+        const [x, y] = toViewFrame(frame, place(placements[stage], point));
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
         maxX = Math.max(maxX, x);
         maxY = Math.max(maxY, y);
       }
     }
-    centres.push(Object.freeze([(minX + maxX) / 2, (minY + maxY) / 2]));
+    const centre = [(minX + maxX) / 2, (minY + maxY) / 2];
+    centres.push(fromViewFrame(frame, centre, 0));
   }
 
   return centres;
+};
+
+/** #### Returns the starting pose's view frame, for turning points into it
+ * - A point of the folded plane, seen from the front, is mirrored left to
+ *   right if the back is towards the viewer, then rolled anticlockwise, to
+ *   give what the viewer sees before any turn-over.
+ * - Throws, naming the design, if its start has a `side` other than
+ *   `"front"` or `"back"`, or a `rollRadians` that is not a finite number.
+ *   Every design is cut at load, so writeStartPose() and sharesSheet(),
+ *   which read the start on the per-frame path, never meet one.
+ * @param design The design, with an optional `start`, as startOf() reads
+ *   it: `rollRadians` and `side`.
+ * @returns The frame: the roll's `cos` and `sin`, and `isBack`, true if
+ *   the back is towards the viewer.
+ */
+const startFrame = (design) => {
+  const { rollRadians, side } = startOf(design);
+  if (side !== "front" && side !== "back") {
+    throw new Error(`Design "${design.id}" starts with unknown side "${side}"`);
+  }
+  if (!Number.isFinite(rollRadians)) {
+    throw new Error(
+      `Design "${design.id}" starts with a roll of ${rollRadians} radians`,
+    );
+  }
+
+  return {
+    cos: Math.cos(rollRadians),
+    isBack: side === "back",
+    sin: Math.sin(rollRadians),
+  };
 };
 
 /** #### Turns a fold's layer selection from naming a step to naming a fold
@@ -614,4 +685,20 @@ const toFoldLayers = (design, layers, foldIndices, stepIndex) => {
   }
 
   return Object.freeze({ [key]: foldIndices[named] });
+};
+
+/** #### Turns a point of the folded plane into the starting pose's view frame
+ * - Mirrors it left to right if the back is towards the viewer, then rolls
+ *   it, as startFrame() sets out; turn-overs are left out.
+ * @param frame The starting pose's view frame, from startFrame().
+ * @param point The point in the folded plane, seen from the front, `[x, y]`
+ *   in metres.
+ * @returns The point as the viewer sees it in the starting pose, `[x, y]`
+ *   in metres.
+ */
+const toViewFrame = (frame, [x, y]) => {
+  const { cos, isBack, sin } = frame;
+  const seenX = isBack ? -x : x;
+
+  return [seenX * cos - y * sin, seenX * sin + y * cos];
 };

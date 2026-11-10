@@ -1,9 +1,9 @@
 /**
  * @fileoverview
  * The paper sheet: a two-tone, flat-shaded mesh with a fine grain on both
- * sides, posed along its design's sequence of folds and turn-overs, with its
- * crease pattern printed on both sides, whose front colour fades to another
- * on request.
+ * sides, turned to its design's starting pose and posed along its sequence
+ * of folds and turn-overs, with its crease pattern printed on both sides,
+ * whose front colour fades to another on request.
  */
 
 import {
@@ -56,11 +56,14 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   unlit, and its lines are black already.
  * - The bounding sphere is set once per geometry, to hold the paper over
  *   its whole fold sequence.
- * - The meshes sit in three nested groups: `group`, outermost, which the
+ * - The meshes sit in four nested groups: `group`, outermost, which the
  *   drag spins; `turnGroup`, within it, which turns the paper over about
- *   its upright axis; and `stretchGroup`, innermost, whose scale stretches
- *   the flat sheet between two designs' shapes. Each group's transform is
- *   then free for its own job.
+ *   its upright axis; `startGroup`, within that, which turns the sheet to
+ *   its design's starting pose, its side about its upright axis and then
+ *   its roll about the line of sight; and `stretchGroup`, innermost, whose
+ *   scale stretches the flat sheet between two designs' shapes. Each
+ *   group's transform is then free for its own job, and the pose, outside
+ *   the stretch, turns a part-stretched sheet without shearing it.
  * - The front's colour fades from the one showing to another through two
  *   scratch colours, mixed in Three.js's working colour space, and the
  *   back's lines follow it; the back's colour never changes.
@@ -75,9 +78,10 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   reaches over every design's fold sequence, from maxPaperRadius(), in
  *   metres.
  * @param sheet The sheet that cutSheet() returns.
- * @returns The `group` to add to the scene; `stretchScale`, the inner
- *   group's `scale`, for writeStretchScale(); fitGrain(), which fits the
- *   grain to the sheet's size and stretch, to call after each
+ * @returns The `group` to add to the scene; `startRotation`,
+ *   `startGroup`'s `rotation`, for writeStartPose(); `stretchScale`, the
+ *   inner group's `scale`, for writeStretchScale(); fitGrain(), which fits
+ *   the grain to the sheet's size and stretch, to call after each
  *   writeStretchScale(); startFrontColorFade(), which sets the front's next
  *   colour, and setFrontColorFade(), which fades the front towards it;
  *   setLinesVisibility(), which fades both sides' fold lines;
@@ -137,8 +141,14 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   const meshes = [frontMesh, backMesh, frontLinesMesh, backLinesMesh];
   const stretchGroup = new Group();
   stretchGroup.add(...meshes);
+
+  // Order `ZYX` turns the sheet about its upright axis, `y`, to show its
+  // side, then rolls it about the line of sight, `z`, as seen.
+  const startGroup = new Group();
+  startGroup.rotation.order = "ZYX";
+  startGroup.add(stretchGroup);
   const turnGroup = new Group();
-  turnGroup.add(stretchGroup);
+  turnGroup.add(startGroup);
   const group = new Group();
   group.add(turnGroup);
 
@@ -266,6 +276,7 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
     setSequencePosition,
     setSheet,
     startFrontColorFade,
+    startRotation: startGroup.rotation,
     stretchScale: stretchGroup.scale,
   };
 };

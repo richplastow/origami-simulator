@@ -13,12 +13,12 @@ type: plan
   white side up, and the ice-cream cone, which starts as a white
   diamond and turns over twice.
 - Implements
-  [Ruling 3](./07-design-research.md#ruling-3-a-sheets-starting-pose-arrives-with-the-stretch)
-  of [07-design-research.md](./07-design-research.md), whose shortlist
+  [Ruling 3](../todo/07-design-research.md#ruling-3-a-sheets-starting-pose-arrives-with-the-stretch)
+  of [07-design-research.md](../todo/07-design-research.md), whose shortlist
   holds the yacht as design 2 and the cone as design 4. Of the 17
   designs whose start is known, 13 start white side up and 8 as a
   diamond.
-- Depends on [Plan 09](../done/09-turn-the-paper-over.md): its view frame,
+- Depends on [Plan 09](./09-turn-the-paper-over.md): its view frame,
   its `steps`, its turn-over, its `DESIGNS` list and its `turnGroup`.
   It extends cutSheet() in `docs/src/fold/engine.js`, stepSequence() in
   `docs/src/fold/stepper.js`, `docs/src/designs/sheet.js` and
@@ -42,11 +42,15 @@ type: plan
   and
   [Matrix4.js](https://github.com/mrdoob/three.js/blob/r187/src/math/Matrix4.js),
   whose `makeRotationFromEuler()` builds order `ZYX` as a turn about
-  `X`, then `Y`, then `Z`.
+  `X`, then `Y`, then `Z`;
+  [Quaternion.js](https://github.com/mrdoob/three.js/blob/r187/src/math/Quaternion.js),
+  whose `setFromEuler()` handles `ZYX`; and
+  [Object3D.js](https://github.com/mrdoob/three.js/blob/r187/src/core/Object3D.js),
+  whose `rotation` updates the quaternion whenever `y` or `z` is set.
 
 ## Definitions
 
-The terms of [Plan 09](../done/09-turn-the-paper-over.md#definitions) apply.
+The terms of [Plan 09](./09-turn-the-paper-over.md#definitions) apply.
 Two more:
 
 - **Roll**: a turn of the flat sheet in its own plane, about the line
@@ -105,7 +109,7 @@ Two more:
    folded plane is mirrored left to right if the back is towards the
    viewer, then rolled, to give what the viewer sees; each turn-over
    mirrors that again, as in
-   [Plan 09](../done/09-turn-the-paper-over.md#decisions). cutSheet() takes
+   [Plan 09](./09-turn-the-paper-over.md#decisions). cutSheet() takes
    each fold's ends back through the same steps in reverse, and swaps
    the ends and the type whenever the viewer sees the back. So a
    diamond's folds are written with its corners at the top, bottom,
@@ -120,10 +124,13 @@ Two more:
 4. **The starting pose is a group of its own**, between Plan 09's turn
    and the stretch: `group` (the spin) → `turnGroup` → `startGroup` →
    `stretchGroup` → the meshes. Its rotation has order `ZYX`, with `z`
-   the roll and `y` the side: 0 for the front, −π for the back, the way
-   a turn-over turns. Sitting outside the stretch's scale, it turns a
-   part-stretched sheet without shearing it. createPaper() returns it
-   as `startRotation`.
+   the roll and `y` the side: 0 for the front, −π for the back. So a
+   sheet turning to its back turns as a turn-over does, its right edge
+   swinging towards the viewer, and one turning back to its front turns
+   the opposite way, as a turn-over does when it unfolds; a rolled
+   sheet turns about its own upright axis, rolled. Sitting outside the
+   stretch's scale, it turns a part-stretched sheet without shearing
+   it. createPaper() returns it as `startRotation`.
 5. **The pose arrives with the stretch**:
    `writeStartPose(designs, rotation, state)` in
    `docs/src/designs/sheet.js`, beside writeStretchScale(), eases `y`
@@ -160,14 +167,16 @@ Two more:
 9. **The ice-cream cone**, from the square as a diamond, white side
    up: `start` is `{ "rollRadians": 0.7853981633974483, "side": "back" }`.
    Heights are from the centre, on a diamond 212.1 mm tall.
-   - Each lower edge folds in to the centre line, right then left: a
-     line from the bottom corner that halves the angle there, meeting
-     the upper edge 62.1 mm out and 43.9 mm up.
+   - Each lower edge folds in to the centre line, right then left, as
+     a valley through all layers: a line from the bottom corner that
+     halves the angle there, meeting the upper edge 62.1 mm out and
+     43.9 mm up.
    - Turn over.
    - The top corner folds down to where the two folded corners meet,
-     along the line 75.0 mm up.
-   - The folded corner's point folds back up, moving only the layer
-     that the fold before moved, along a line `PLEAT_FRACTION = 1 / 3`
+     as a valley through all layers, along the line 75.0 mm up.
+   - The folded corner's point folds back up, as a valley, over the
+     face of that layer, moving only the layer that the fold before
+     moved, along a line `PLEAT_FRACTION = 1 / 3`
      of the way down it, 64.6 mm up, so that it stands 10.4 mm above
      the top edge. The diagram gives no landmark; open to retuning at
      Manual QA 11.
@@ -178,6 +187,13 @@ Two more:
      cream above a coloured cone of 9,320 mm². Its last stage centre
      is (7.32, −7.32) mm in the folded plane. It reaches 108.32 mm from
      the origin, so the camera stays where the hat's 116.21 mm puts it.
+   - Prototype: while the point folds back up, the edge along its
+     crease dips through the layer beneath by up to one paper
+     thickness, 0.1 mm, within 0.11 mm of the crease, as the dart's
+     creases already do (within 0.09 mm): the engine turns every flat
+     fold about its line at the back of the stack. Hidden from the
+     front and under a pixel from behind. As a mountain, the point
+     would pass 17 mm through that layer.
    - Its file is `docs/src/designs/ice-cream.js`, exporting
      `ICE_CREAM`, with the id `ice-cream`.
 10. **The buttons** read "Yacht" and "Ice Cream", with
@@ -203,6 +219,9 @@ Two more:
   centre the stage as the viewer sees it (Agent QA 2).
 - It should leave the dart, the hat and the watermelon exactly as they
   were (Agent QA 3).
+- It should reject, at load, a start whose side is neither `"front"`
+  nor `"back"`, or whose roll is not a number, so that the engine and
+  the pose never read a side differently (Agent QA 4).
 
 **Agent QA**
 
@@ -212,13 +231,16 @@ Two more:
    Expect: `front -18.75 -18.75 valley`, then
    `back 18.75 -18.75 mountain` (a diamond's top corner folded down to
    its centre; prototype)
-3. Do: [Plan 09's Step 1](../done/09-turn-the-paper-over.md#step-1-steps-in-the-engine-and-the-pose)
+3. Do: [Plan 09's Step 1](./09-turn-the-paper-over.md#step-1-steps-in-the-engine-and-the-pose)
    Agent QA 1 and 2, and
-   [its Step 2](../done/09-turn-the-paper-over.md#step-2-the-watermelon-and-the-list-of-designs)
+   [its Step 2](./09-turn-the-paper-over.md#step-2-the-watermelon-and-the-list-of-designs)
    Agent QA 1, unchanged.
    Expect: each gives its own `Expect:`.
+4. Do: `node --input-type=module -e 'import { cutSheet } from "./docs/src/fold/engine.js"; for (const start of [{ rollRadians: 0, side: "white" }, { side: "back" }]) { try { cutSheet({ aspect: 1, id: "odd", start, steps: [] }); } catch (error) { console.log(error.message); } }'`
+   Expect: `Design "odd" starts with unknown side "white"`, then
+   `Design "odd" starts with a roll of undefined radians`
 
-### Step 2: The pose with the stretch [P]
+### Step 2: The pose with the stretch
 
 - Changes `docs/src/designs/sheet.js`: writeStartPose() (Decision 5).
 - Changes `docs/src/fold/stepper.js`: when the stretch phase runs
@@ -233,11 +255,11 @@ Two more:
 
 1. Do: `node --input-type=module -e 'import { writeStartPose } from "./docs/src/designs/sheet.js"; const d = { a: { aspect: 1 }, b: { aspect: 1, start: { rollRadians: Math.PI / 4, side: "back" } }, c: { aspect: 1, start: { rollRadians: 0, side: "back" } } }; const pose = (stretchFromId, designId, stretchProgress) => { const r = { y: 9, z: 9 }; writeStartPose(d, r, { designId, stretchFromId, stretchProgress }); return r.y.toFixed(4) + " " + r.z.toFixed(4); }; console.log([pose("a", "b", 0), pose("a", "b", 0.5), pose("a", "b", 1), pose("c", "b", 0.5), pose("b", "a", 0.25)].join(" | "));'`
    Expect: `0.0000 0.0000 | -1.5708 0.3927 | -3.1416 0.7854 | -3.1416 0.3927 | -2.6507 0.6627`
-2. Do: `node --input-type=module -e 'import { stepSequence } from "./docs/src/fold/stepper.js"; const d = { a: { aspect: 1 }, b: { aspect: 1, start: { rollRadians: 0, side: "back" } }, c: { aspect: 1 }, e: { aspect: 0.5 } }; const run = (to, seconds) => { const s = { designId: "a", direction: 0, linesFade: 0, linesVisibility: 0, position: 0, stretchFromId: "a", stretchProgress: 1 }; stepSequence(seconds, d, s, { designId: to, linesOn: false, position: 1 }); return [s.designId, s.stretchProgress.toFixed(4), s.position.toFixed(4)].join(" "); }; console.log([run("b", 0.2), run("b", 0.75), run("c", 0.35), run("e", 0.2)].join(" | "));'`
-   Expect: `b 0.5000 0.0000 | b 1.0000 0.5000 | c 1.0000 0.5000 | e 0.5000 0.0000`
-   (a start that differs stretches for 0.4 s, then folds; the same
+2. Do: `node --input-type=module -e 'import { stepSequence } from "./docs/src/fold/stepper.js"; const d = { a: { aspect: 1 }, b: { aspect: 1, start: { rollRadians: 0, side: "back" } }, c: { aspect: 1 }, e: { aspect: 0.5 }, f: { aspect: 1, start: { rollRadians: Math.PI / 4, side: "front" } } }; const run = (to, seconds) => { const s = { designId: "a", direction: 0, linesFade: 0, linesVisibility: 0, position: 0, stretchFromId: "a", stretchProgress: 1 }; stepSequence(seconds, d, s, { designId: to, linesOn: false, position: 1 }); return [s.designId, s.stretchProgress.toFixed(4), s.position.toFixed(4)].join(" "); }; console.log([run("b", 0.2), run("b", 0.75), run("c", 0.35), run("e", 0.2), run("f", 0.2)].join(" | "));'`
+   Expect: `b 0.5000 0.0000 | b 1.0000 0.5000 | c 1.0000 0.5000 | e 0.5000 0.0000 | f 0.5000 0.0000`
+   (a side that differs stretches for 0.4 s, then folds; the same
    shape and start folds at once; a shape that differs stretches, as
-   now)
+   now; a roll that differs alone stretches too)
 
 ### Step 3: The yacht and the ice-cream cone
 
@@ -383,7 +405,7 @@ open beside it.
   (Decision 7).
 - The row of buttons grows with each design, and is tidied once the
   designs are in
-  ([Ruling 5](./07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)).
+  ([Ruling 5](../todo/07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)).
 
 ## Audit
 
@@ -400,3 +422,68 @@ open beside it.
   labels, and leaving the yacht tilted; split from the turn-over,
   Plan 09, by the seam test; figures from a prototype against the
   current engine.
+- **2026-11-10T22:02:42Z** — **reviewed**: no major findings; the
+  yacht's and cone's folds, turned into the front's terms by hand and
+  cut by the current engine with Decision 3's centres, give every
+  prototype figure (Step 1 Agent QA 2, Step 3 Agent QA 1, sizes and
+  areas); at 400 samples per step no two overlapping faces share a
+  plane, the yacht has no crossing, and the cone's only crossings lie
+  within 0.11 mm of a crease, as the dart's within 0.09 mm; `ZYX` and
+  its signs checked against r187's Matrix4.js, Quaternion.js and
+  Object3D.js; fixed: Decision 4 names each way the side turns,
+  Decision 9 gives each fold's type, the pleat a valley, and the
+  crease dip, Context names the sources checked, Step 2 loses its
+  `[P]`, since it needs Step 1's startOf().
+- **2026-11-10T22:10:01Z** — **implemented**: Steps 1 to 4;
+  `DEFAULT_START`, startOf() and writeStartPose() in
+  `docs/src/designs/sheet.js`; the view frame from the start and the
+  stage centres in `docs/src/fold/engine.js`; the stretch phase on a
+  differing start in `docs/src/fold/stepper.js`; new
+  `docs/src/designs/yacht.js` and `docs/src/designs/ice-cream.js`, and
+  both in `docs/src/designs/list.js`; `startGroup` and `startRotation`
+  in `docs/src/scene/paper.js`; writeStartPose() in `docs/src/main.js`;
+  two buttons in `docs/index.html`. Checks failed first as expected
+  (Step 1 Agent QA 1 and 2 gave `false` and `0.00 -10.98 valley`;
+  Step 2 Agent QA 1 threw on the missing export, run against `HEAD`'s
+  `sheet.js` since the export was written early; Step 2 Agent QA 2 gave
+  `b 1.0000 0.2857 | b 1.0000 1.0000` for the first two; Step 3 Agent
+  QA 2 listed three designs; Step 4 Agent QA 1 and 2 gave `4` and
+  `0`), then every Agent QA block gives its `Expect:`; the dart's,
+  hat's and watermelon's cut sheets, folds included, are byte-for-byte
+  those of `HEAD`; Manual QA unchanged, walked against the code.
+- **2026-11-10T22:10:08Z** — **verified**: agent checks pass: 8
+  changed modules parse; no changed line passes 80 columns but
+  `docs/index.html`'s lines 10 and 27, the favicon's `data:` URL and the
+  canvas's `aria-label`, both unchanged since `HEAD`; `/` and all 24
+  files under `docs/src/` return 200 from a server started and stopped
+  for the check; vendored checksums match; browser not run.
+- **2026-11-10T22:15:55Z** — **quality-checked**: Fixed: the two
+  readers of `side` disagreed, since a design with `side: "white"`, or
+  a `start` with no `rollRadians`, was cut as the front (or with `NaN`
+  arithmetic) while writeStartPose() wrote `NaN` to the group's
+  rotation; startFrame() in `docs/src/fold/engine.js` now takes the
+  design and throws, naming it, on a side other than `"front"` or
+  `"back"` or a roll that is not finite, so every design is checked at
+  load before the pose reads it, with the rule noted beside
+  `SIDE_RADIANS` in `docs/src/designs/sheet.js` and in cutSheet()'s doc
+  comment (Step 1 Agent QA 4 added); a mutant of sharesSheet() that
+  drops the roll survived every check, so Step 2 Agent QA 2 gains a
+  roll-only case, `f`; `docs/src/scene/paper.js`'s `@fileoverview`
+  rewrapped. Deferred: main.js writes the pose only on a change, so a
+  first design with a `start` would show unturned until the first
+  switch; no failure today, since the dart is first with the default,
+  and the fix (one writeStartPose() after createPaper(), Step 4 Agent
+  QA 2 then `2`) rewords Decision 5. Verified fine: per-frame path
+  (writeStartPose(), sharesSheet(), startOf(), and r187's Euler
+  setters into Quaternion.setFromEuler(), lines 301 to 369, allocate
+  nothing); `ZYX` signs against r187 Matrix4.js lines 395 to 409;
+  resources (`startGroup` holds no geometry, material or texture);
+  resize and input untouched; motion through `stretchProgress`, scaled
+  by elapsed time; every Agent QA block, Plan 09's Step 1 Agent QA 1 to
+  6 and Step 2 Agent QA 1 included; 19 mutants of engine.js, sheet.js
+  and stepper.js all caught but `isBack: side !== "front"`, equivalent
+  once the side is checked; Manual QA walked against the code,
+  unchanged.
+- **2026-11-10T22:30:52Z** — **done**: manual QA passed in the browser; the
+  values of Decisions 6, 8 and 9 kept: `STRETCH_SECONDS` 0.4 s,
+  `HULL_RISE_FRACTION` 0.11, `PLEAT_FRACTION` 1 / 3.

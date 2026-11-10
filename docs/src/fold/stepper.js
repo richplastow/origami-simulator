@@ -2,14 +2,16 @@
  * @fileoverview
  * Moves the sequence position through a design's steps, folds and
  * turn-overs, one step at a time, towards a target, by way of the flat
- * sheet stretching when the target names another design, and fades the
- * printed fold lines in and out.
+ * sheet stretching and turning to its starting pose when the target names
+ * another design, and fades the printed fold lines in and out.
  */
+
+import { startOf } from "../designs/sheet.js";
 
 export const FADE_IN_SECONDS = 0.6; // the fold lines, from hidden to shown
 export const FADE_OUT_SECONDS = 0.3; // the fold lines, from shown to hidden
 export const FOLD_SECONDS = 0.7; // one step, a fold or a turn-over, forwards
-export const STRETCH_SECONDS = 0.4; // the flat sheet, from one shape to another
+export const STRETCH_SECONDS = 0.4; // the flat sheet, to another shape or pose
 export const UNFOLD_SECONDS = 0.35; // one step, backwards: twice as fast
 
 /** #### Advances the sequence state one frame towards the target
@@ -25,9 +27,9 @@ export const UNFOLD_SECONDS = 0.35; // one step, backwards: twice as fast
  *   whatever the target's `position`. At 0, the lines fade out, if
  *   showing, then the target's design takes over: `stretchFromId` takes
  *   the old `designId`, and `stretchProgress` runs from 0 to 1 in
- *   `STRETCH_SECONDS`, or is 1 at once when the two designs' aspects
- *   match. Once it reaches 1, the lines fade towards `linesOn`, then
- *   folding starts.
+ *   `STRETCH_SECONDS`, or is 1 at once when the two designs share their
+ *   aspect and their starting pose, its roll and its side. Once it
+ *   reaches 1, the lines fade towards `linesOn`, then folding starts.
  * - A target `designId` of null means flat, keeping the sheet showing;
  *   once the paper is flat, the lines fade out, if showing.
  * - At rest at any other position, the lines fade towards `linesOn`.
@@ -38,7 +40,8 @@ export const UNFOLD_SECONDS = 0.35; // one step, backwards: twice as fast
  * - Allocates nothing, so it is safe on the per-frame path.
  * - Pure maths, with no DOM or GPU access.
  * @param deltaSeconds The time elapsed since the last frame, in seconds.
- * @param designs The designs, keyed by `id`, each with its `aspect`.
+ * @param designs The designs, keyed by `id`, each with its `aspect` and
+ *   an optional `start`.
  * @param state The sequence state, mutated: `designId`; `direction`, 1
  *   while folding, −1 while unfolding and 0 at rest, stretching or
  *   fading; `linesFade`, 1 while the lines fade in, −1 while they fade
@@ -63,7 +66,8 @@ export const stepSequence = (deltaSeconds, designs, state, target) => {
   let remainingSeconds = Math.max(deltaSeconds, 0);
 
   while (true) {
-    // The flat sheet finishes stretching before anything else happens.
+    // The flat sheet finishes stretching and turning to its starting pose
+    // before anything else happens.
     if (state.stretchProgress < 1) {
       if (remainingSeconds <= 0) break;
       const stretchSecondsLeft = (1 - state.stretchProgress) * STRETCH_SECONDS;
@@ -116,10 +120,12 @@ export const stepSequence = (deltaSeconds, designs, state, target) => {
         state.stretchFromId = state.designId;
         state.designId = target.designId;
         state.direction = 0;
-        state.stretchProgress =
-          designs[state.stretchFromId].aspect === designs[state.designId].aspect
-            ? 1
-            : 0;
+        state.stretchProgress = sharesSheet(
+          designs[state.stretchFromId],
+          designs[state.designId],
+        )
+          ? 1
+          : 0;
         continue;
       }
       state.direction = Math.sign(targetPosition - state.position);
@@ -147,5 +153,24 @@ export const stepSequence = (deltaSeconds, designs, state, target) => {
     state.designId !== startDesignId ||
     state.stretchProgress !== startStretchProgress ||
     state.linesVisibility !== startLinesVisibility
+  );
+};
+
+/** #### Returns true if two designs' flat sheets look the same
+ * - The same `aspect`, roll and side, so no stretch or turn is needed
+ *   between them.
+ * - Allocates nothing, so it is safe on the per-frame path.
+ * @param first One design, with its `aspect` and an optional `start`.
+ * @param second The other design, likewise.
+ * @returns True if the two share their shape and starting pose.
+ */
+const sharesSheet = (first, second) => {
+  const firstStart = startOf(first);
+  const secondStart = startOf(second);
+
+  return (
+    first.aspect === second.aspect &&
+    firstStart.rollRadians === secondStart.rollRadians &&
+    firstStart.side === secondStart.side
   );
 };

@@ -1,6 +1,8 @@
+import { ICE_CREAM } from "./ice-cream.js";
 import { PAPER_DART } from "./paper-dart.js";
 import { PAPER_HAT } from "./paper-hat.js";
 import { WATERMELON } from "./watermelon.js";
+import { YACHT } from "./yacht.js";
 
 /** #### Every design, in the order of their buttons on the page
  * - `main.js` cuts each design's sheet from it, and starts with the first;
@@ -8,4 +10,10 @@ import { WATERMELON } from "./watermelon.js";
  *   its file, a line here and a `<button>` in `index.html`.
  * - Frozen: copy it rather than change it.
  */
-export const DESIGNS = Object.freeze([PAPER_DART, PAPER_HAT, WATERMELON]);
+export const DESIGNS = Object.freeze([
+  PAPER_DART,
+  PAPER_HAT,
+  WATERMELON,
+  YACHT,
+  ICE_CREAM,
+]);

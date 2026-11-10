@@ -21,7 +21,7 @@ type: plan
   which comes round carries its fold lines. It extends cutSheet() in
   `docs/src/fold/engine.js`, the pose in `docs/src/fold/pose.js`, and
   createPaper() in `docs/src/scene/paper.js`. It feeds
-  [Plan 10](../todo/10-start-the-sheet-turned.md), which adds a starting pose
+  [Plan 10](./10-start-the-sheet-turned.md), which adds a starting pose
   to the same view of the paper.
 - The watermelon follows Fumiaki Shingu's diagram at
   [Origami Club](https://en.origami-club.com/easy/food/watermelon2/index.html),

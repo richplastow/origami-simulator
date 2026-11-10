@@ -24,8 +24,9 @@ type: research
   - **Photo**: the finished model was seen, but not its steps.
   - **Code**: checked in this repo's source on 2026-11-10.
   - **Derived**: worked out, not prototyped and not seen in a browser.
-- Nothing here was prototyped. No design has been run through
-  cutSheet(), so every "the engine can do this" is derived.
+- Seven designs have been run through cutSheet() in prototypes: 2, 4
+  and 5 for Plans 09 and 10, and 8, 16, 21 and 22 for Plan 11. For the
+  rest, every "the engine can do this" is derived.
 - The repo has no `adr/` folder yet. At the Lead Developer's direction,
   the decisions of 2026-11-10 are recorded here, in
   [Rulings](#rulings), in an ADR's shape: context, decision,
@@ -114,7 +115,7 @@ needs a new ruling.
     needs a group between them (derived).
   - A turn-over about the vertical axis combined with a 45° turn is one
     half-turn about an axis tilted 22.5° from vertical (derived).
-    [Plan 10](./10-start-the-sheet-turned.md#decisions) eases the two
+    [Plan 10](../done/10-start-the-sheet-turned.md#decisions) eases the two
     angles together instead, which looks much the same and needs no
     rule for which way round a half-turn goes.
   - Two squares have no stretch to ride on (code: the stretch is done
@@ -190,7 +191,7 @@ Derived, in the order the work depends on it.
    spinning them.
 2. **A starting pose**
    ([Ruling 3](#ruling-3-a-sheets-starting-pose-arrives-with-the-stretch)).
-   Of the 17 designs whose start is known, 13 start white side up and
+   Of the 18 designs whose start is known, 14 start white side up and
    8 start as a diamond.
 3. **A turn-over step**
    ([Ruling 2](#ruling-2-turning-the-paper-over-is-an-animated-step)).
@@ -233,7 +234,7 @@ Sources are in [Sources](#sources).
 | 5   | Watermelon slice | 1:1   | □ colour | 3     | 2     | Diagram |
 | 6   | Rocket           | 1:1   | □ white  | 7     | 2     | Diagram |
 | 7   | Cicada           | 1:1   | ◇ white  | 9     | 0     | Diagram |
-| 8   | Mount Fuji       | 1:1   | □ colour | 3     | 1     | Text    |
+| 8   | Mount Fuji       | 1:1   | □ colour | 4     | 2     | Diagram |
 | 10  | Cat face         | 1:1   | ◇ white  | 9     | 2     | Text    |
 
 - 1: white rice above a coloured wrap. Five of its seven folds go
@@ -246,8 +247,12 @@ Sources are in [Sources](#sources).
 - 6: coloured nose cone, white body and fins.
 - 7: coloured body with a white V collar. Traditional; the page dates it
   to 1845, which was not checked.
-- 8: white snow cap on a coloured mountain. The step text was read as
-  far as step 5; the page is `http` only.
+- 8: white snow cap on a coloured mountain. Its step photos show the
+  source creasing the middle, folding the corners of one half, then
+  re-creasing the middle so that the model stands.
+  [Plan 11](./11-fuji-house-pencil-heart.md#decisions) folds the middle
+  first, so that the flat model shows only the mountain. The page is
+  `http` only.
 - 10: the two-colour version folds one layer behind, for a coloured face
   with white ears. Its fold count is approximate.
 
@@ -260,7 +265,7 @@ Sources are in [Sources](#sources).
 | 13  | Heart              | 1:1   | □ white  | 14    | 3     | Text    |
 | 14  | Pureland Fish      | 1:1   | □ white  | 4     | 2     | Diagram |
 | 15  | Pureland Butterfly | ?     | ?        | ?     | ?     | Photo   |
-| 21  | Simple heart       | 1:2   | ?        | 11    | 2     | Text    |
+| 21  | Simple heart       | 1:2   | □ white  | 11    | 2     | Diagram |
 | 22  | Pencil, half sheet | 1:2   | ?        | ?     | ?     | Photo   |
 
 - 11: traditional, one colour, the quickest animal.
@@ -272,13 +277,17 @@ Sources are in [Sources](#sources).
   quite abstract.
 - 15: by John Smith, who devised Pureland. The page's diagram link
   points at a different model, so its folds are unknown.
-- 21: seven steps of plain folds by their text ("fold both sides to the
-  centre", "make 4 folds on the diagonal", "fold down the tips"). The
-  source cuts a square in two; here the sheet is simply 1:2.
+- 21: by Francis Ow. Seven steps of plain folds, read from the step
+  photos: a strip, two flaps to the centre, two sides in, four corners
+  and two tips. One colour. The source cuts a square in two; here the
+  sheet is simply 1:2. Four of its folds must name one flap with
+  `movedBy`, which the engine can do.
 - 22: the photo shows a coloured body, a white band and a coloured tip.
-  Its steps are in a video, which was not watched, so whether the
-  engine can fold it is not known. Read the video, or work the folds
-  out, before planning it.
+  Its steps are in a video, which was not watched, and no written copy
+  was found.
+  [Plan 11](./11-fuji-house-pencil-heart.md#decisions) folds a pencil of
+  that look by a sequence worked out in this repo, six folds and two
+  turn-overs.
 
 ### C. Simple once one step is adapted
 
@@ -305,6 +314,8 @@ Sources are in [Sources](#sources).
 - **9, the pencil from a 1:4 strip**: five plain folds by its step
   text, but held back by
   [Ruling 4](#ruling-4-every-sheet-keeps-the-same-area-so-14-strips-wait).
+  Its step photos show the point folded off-centre, through uneven
+  layers.
 - **The traditional cup**: five folds, simple if left flat, not opened.
   A spare, in one colour.
 
@@ -329,8 +340,9 @@ Each needs a fold that is not simple, by its own source:
 ### Crediting a design
 
 Designs 1 to 6, 12, 16, 19 and 20 are Fumiaki Shingu's diagrams at
-Origami Club; 14 and 15 are named designers' models; the rest are
-traditional or uncredited. Each design file's `@fileoverview` names its
+Origami Club; 14, 15 and 21 are named designers' models; 22 is from
+Mari Ono's _Origami for Children_, by Red Ted Art's account; the rest
+are traditional or uncredited. Each design file's `@fileoverview` names its
 source, as `docs/src/designs/paper-dart.js` names Fold'N Fly.
 
 ## Open questions
@@ -350,13 +362,16 @@ them:
   checked on the dart and the hat.
 - [Plan 09](../done/09-turn-the-paper-over.md): the turn-over step, proved by
   the watermelon, which turns over twice.
-- [Plan 10](./10-start-the-sheet-turned.md): the starting pose, proved
+- [Plan 10](../done/10-start-the-sheet-turned.md): the starting pose, proved
   by the yacht, which starts white side up, and the ice-cream cone,
   which starts as a white diamond.
+- [Plan 11](./11-fuji-house-pencil-heart.md): Mount Fuji, the house,
+  a pencil and the heart, designs 8, 16, 22 and 21, the last two from
+  1:2 sheets, with no engine work.
 
 The remaining designs follow in later plans, a few to a plan, with
-layer selection if the cicada or the penguin needs it. The three
-drafted designs were run through the current engine in a prototype on
+layer selection if the cicada or the penguin needs it. The seven
+drafted designs were run through the current engine in prototypes on
 2026-11-10, and each cuts cleanly; the others have not been.
 
 Engineering choices that no one has ruled on are marked "derived" or
