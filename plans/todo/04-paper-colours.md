@@ -35,12 +35,12 @@ type: plan
 1. **The front only**: a swatch sets the colour of the paper's front,
    the side that carries the fold lines. `PAPER_BACK_COLOR` stays.
 2. **The colours** live in `PAPER_COLORS`, in
-   `docs/src/scene/paper-colors.js`, each under an assigned id. Their
-   number and values are _TBD_ (suggested: the five below). Red is
+   `docs/src/scene/paper-colors.js`, each under an assigned id: the
+   five below, open to tuning by eye at Manual QA 3 and 4. Red is
    today's `PAPER_FRONT_COLOR`, which moves there from
    `docs/src/scene/paper.js`. Every colour's contrast against the black
-   fold lines is at least 3:1; the suggested five run from 4.48 to
-   11.51 (computed 2026-11-10, by WCAG's relative luminance).
+   fold lines is at least 3:1; these five run from 4.48 to 11.51
+   (computed 2026-11-10, by WCAG's relative luminance).
 
    | Id       | Name   | Hex        | Contrast with black |
    | -------- | ------ | ---------- | ------------------- |
@@ -78,8 +78,8 @@ type: plan
    known colour or none is checked, returns the checked input's id, and
    calls `onChange(id)` at every change. The page's HTML therefore
    holds ids only, and no colour is written twice.
-5. **The fade**: `PAPER_COLOR_FADE_SECONDS` is _TBD_ (suggested 0.3,
-   the fold lines' fade-out), eased with smoothstep() from
+5. **The fade**: `PAPER_COLOR_FADE_SECONDS = 0.3`, the length of the
+   fold lines' fade-out, eased with smoothstep() from
    `docs/src/fold/easing.js`.
    - `stepColorFade(deltaSeconds, fade)`, pure, in `paper-colors.js`,
      advances `fade.progress` to 1 and returns true while it changes.
@@ -178,10 +178,10 @@ type: plan
 
 ## Done when
 
-Every Agent QA block passes, the agent checks in CLAUDE.md pass, every
-`_TBD_` in Decisions 2 and 5 has a value, and in the browser each swatch
-fades the paper's front to its colour, with the fold lines readable on
-all of them and a clean console.
+Every Agent QA block passes, the agent checks in CLAUDE.md pass, and in
+the browser each swatch fades the paper's front to its colour, with the
+fold lines readable on all of them, a clean console, and Decision 2's
+colours kept or retuned by eye at Manual QA 3 and 4.
 
 ## Manual QA
 
@@ -240,10 +240,14 @@ hard-reload (Shift+Cmd+R).
 
 ## Audit
 
-- **__DRAFTED_AT__** — **drafted**: swatches that fade the paper's
+- **2026-11-10T10:56:17Z** — **drafted**: swatches that fade the paper's
   front between the colours of `PAPER_COLORS`, by a pure
   `stepColorFade()` and `Color.lerpColors()`; agent proposed radio
   inputs in place of buttons, the front only, the 3:1 contrast floor,
   swatches painted from `PAPER_COLORS`, a change that does not wait for
   the fold sequence, and the bar's renaming to `.controls`; the colours
   and the fade's length left `_TBD_`.
+- **2026-11-10T11:10:07Z** — **ruled**: the Lead Developer accepted the
+  agent's suggested values and proposals ("go with the defaults"): the
+  five colours of Decision 2, a 0.3 s fade, radio inputs styled as
+  plain squares, and the bar's renaming to `.controls`.

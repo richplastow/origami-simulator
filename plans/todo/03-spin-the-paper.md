@@ -56,16 +56,17 @@ type: plan
 2. **Drag to angle**: a drag of `dx` CSS pixels to the right adds
    `dx × SPIN_RADIANS_PER_PIXEL` to the yaw, and a drag of `dy` down adds
    `dy × SPIN_RADIANS_PER_PIXEL` to the pitch, so the paper's near
-   surface follows the pointer. `SPIN_RADIANS_PER_PIXEL` is _TBD_
-   (suggested 0.008: a drag of 393 px, about a phone's width, is half a
-   turn), open to tuning by eye at Manual QA 2.
+   surface follows the pointer. `SPIN_RADIANS_PER_PIXEL = 0.008`, so a
+   drag of 393 px, about a phone's width, is half a turn; it is open to
+   tuning by eye at Manual QA 2.
 3. **Tilt limits**: the pitch is clamped where the view reaches straight
    above and straight below the paper. The camera is raised by
    `CAMERA_ELEVATION_RADIANS` (20°), so the pitch runs from
    `−(π/2 + elevation)` to `π/2 − elevation`, −110° to 70°, and
    `main.js` derives both from that constant. Past those limits a drag
    to the right would carry the near surface left. The yaw has no
-   limit and is not wrapped: every angle is a valid turn.
+   limit and is not wrapped: every angle is a valid turn. At either
+   limit a flat, unturned sheet is seen edge-on.
 4. **Maths apart from input**: `turnSpin(deltaXPixels, deltaYPixels,
    maxPitchRadians, minPitchRadians, spin)` in `docs/src/input/spin.js`
    imports nothing and writes `spin` in place, so Node can run it.
@@ -98,8 +99,8 @@ type: plan
 9. **The canvas's text alternative**: its `aria-label` in
    `docs/index.html`, "A square sheet of red origami paper, seen from
    slightly above", no longer describes a sheet that changes shape and
-   turns. Its new wording is _TBD_ (suggested: "A sheet of origami
-   paper, which folds into simple designs and turns when dragged").
+   turns. It becomes "A sheet of origami paper, which folds into simple
+   designs and turns when dragged".
 10. **Performance**: a pointer move writes two numbers and one Euler,
     and allocates nothing; the frame loop already draws every frame.
     The optional Manual QA 11 measures it.
@@ -119,10 +120,11 @@ type: plan
 **Agent QA**
 
 1. Do: `node --input-type=module -e 'import { turnSpin } from "./docs/src/input/spin.js"; const s = { pitchRadians: 0, yawRadians: 0 }; turnSpin(100, 50, 1.2217, -1.9199, s); console.log(s.pitchRadians.toFixed(4), s.yawRadians.toFixed(4));'`
-   Expect: `0.4000 0.8000` (with Decision 2's suggested 0.008; `100 ×`
-   and `50 ×` the ruled value otherwise)
+   Expect: `0.4000 0.8000` (`50 ×` and `100 ×` Decision 2's value, should
+   Manual QA 2 retune it)
 2. Do: `node --input-type=module -e 'import { turnSpin } from "./docs/src/input/spin.js"; const max = Math.PI / 2 - (20 * Math.PI) / 180; const min = -Math.PI / 2 - (20 * Math.PI) / 180; const s = { pitchRadians: 0, yawRadians: 0 }; turnSpin(1000, 1000, max, min, s); const top = s.pitchRadians.toFixed(4); turnSpin(0, -1000, max, min, s); console.log(top, s.pitchRadians.toFixed(4), s.yawRadians.toFixed(4));'`
-   Expect: `1.2217 -1.9199 8.0000` (the yaw with the suggested 0.008)
+   Expect: `1.2217 -1.9199 8.0000` (the yaw is `1000 ×` Decision 2's
+   value)
 3. Do: `grep -c 'new [A-Z]\|^import' docs/src/input/spin.js`
    Expect: `0`
 
@@ -173,10 +175,10 @@ type: plan
 
 ## Done when
 
-Every Agent QA block passes, the agent checks in CLAUDE.md pass, every
-`_TBD_` in Decisions 2 and 9 has a value, and in the browser a drag on
-the canvas turns the paper about its centre, flat or folded, with the
-camera and lights unmoved and a clean console.
+Every Agent QA block passes, the agent checks in CLAUDE.md pass, and in
+the browser a drag on the canvas turns the paper about its centre, flat
+or folded, with the camera and lights unmoved, a clean console, and
+Decision 2's sensitivity kept or retuned by eye at Manual QA 2.
 
 ## Manual QA
 
@@ -258,10 +260,15 @@ hard-reload (Shift+Cmd+R).
 
 ## Audit
 
-- **__DRAFTED_AT__** — **drafted**: a turntable spin of the paper's
+- **2026-11-10T10:56:17Z** — **drafted**: a turntable spin of the paper's
   group, by pure `turnSpin()` maths and a pointer-capture drag handler,
   with the camera and lights fixed; agent proposed the tilt limits at
   straight above and below, pointer capture as the drag's only state,
   the `grab` cursors, `user-select: none` (not seen in a browser), and
   the list left out; `SPIN_RADIANS_PER_PIXEL` and the canvas's
   `aria-label` left `_TBD_`.
+- **2026-11-10T11:10:07Z** — **ruled**: the Lead Developer accepted the
+  agent's suggested values and proposals ("go with the defaults"):
+  `SPIN_RADIANS_PER_PIXEL = 0.008`; the tilt limits at straight above
+  and below, where a flat sheet is edge-on; the canvas's new
+  `aria-label`; and no glide, reset gesture or keyboard spin.
