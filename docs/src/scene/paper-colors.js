@@ -7,7 +7,10 @@
 // Each colour's assigned id, which a swatch's `value` names, mapped to its
 // colour as a hex number, in sRGB. Against the black fold lines, every one
 // keeps WCAG's non-text contrast of at least 3:1, from 4.48 (red) to 11.51
-// (yellow).
+// (yellow). As the back's fold lines, against its off-white,
+// `PAPER_BACK_COLOR` in scene/paper.js, they measure lower, and are kept as
+// they are: red 4.16:1, blue 3.04:1, pink 2.52:1, green 2.47:1 and yellow
+// 1.62:1.
 export const PAPER_COLORS = Object.freeze({
   red: 0xd9342b, // origami red, 4.48:1
   yellow: 0xf2b632, // 11.51:1

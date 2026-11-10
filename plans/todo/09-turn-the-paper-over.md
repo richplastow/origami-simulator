@@ -17,7 +17,7 @@ type: plan
   of [07-design-research.md](./07-design-research.md), whose shortlist
   holds the watermelon as design 5. At least 12 of its 22 designs turn
   over, so no more can be added without this.
-- Depends on [Plan 08](./08-fold-lines-both-sides.md), so that the side
+- Depends on [Plan 08](../done/08-fold-lines-both-sides.md), so that the side
   which comes round carries its fold lines. It extends cutSheet() in
   `docs/src/fold/engine.js`, the pose in `docs/src/fold/pose.js`, and
   createPaper() in `docs/src/scene/paper.js`. It feeds

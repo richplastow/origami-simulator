@@ -2,7 +2,7 @@
  * @fileoverview
  * The paper sheet: a two-tone, flat-shaded mesh with a fine grain on both
  * sides, posed along its design's fold sequence, with its crease pattern
- * printed on the front, whose colour fades to another on request.
+ * printed on both sides, whose front colour fades to another on request.
  */
 
 import {
@@ -21,6 +21,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
+  NoColorSpace,
   RepeatWrapping,
   SRGBColorSpace,
   Sphere,
@@ -36,23 +37,29 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
 /** #### Creates the paper sheet, flat, from a cut sheet
  * - Each face has its own vertices and a fan of triangles; each bridging
  *   strip is two triangles joining the edges of two faces at a crease.
- * - The front, back and fold-line meshes share one geometry, whose
+ * - The front, back and two fold-line meshes share one geometry, whose
  *   positions are rewritten in place as the paper folds.
- * - The fold-line mesh shows the sheet's crease pattern, drawn into a
- *   canvas, on the front only, through UVs that follow sheet coordinates.
- *   Unlit and transparent, it draws over the front mesh, whose depth it
- *   matches. It starts hidden, so its texture uploads only once shown.
+ * - Each fold-line mesh shows the sheet's crease pattern on its side,
+ *   drawn into a canvas of its own, through UVs that follow sheet
+ *   coordinates, so each back line lies beneath its front line.
+ *   Transparent, each draws after the opaque paper, at the depth of its
+ *   side's mesh, which Material's default `depthFunc`, LessEqualDepth,
+ *   lets it pass. Both start hidden, so their textures upload only once
+ *   shown.
+ * - The front's lines are black and unlit, a `map`. The back's are a
+ *   coverage mask, the `alphaMap` of a lit material in the front's colour,
+ *   so they take the front's colour and darken in shade with the paper.
  * - The front mesh alone casts shadows, the whole sheet both ways up, and
- *   the front and back meshes receive them, so the paper shadows itself.
- *   The fold-line mesh neither casts nor receives: it is unlit, and its
- *   lines are black already.
+ *   the front, back and back-line meshes receive them, so the paper
+ *   shadows itself. The front-line mesh neither casts nor receives: it is
+ *   unlit, and its lines are black already.
  * - The bounding sphere is set once per geometry, to hold the paper over
  *   its whole fold sequence.
  * - The meshes sit in an inner group, whose scale stretches the flat sheet
  *   between two designs' shapes, so `group` stays free to turn.
  * - The front's colour fades from the one showing to another through two
- *   scratch colours, mixed in Three.js's working colour space; the back's
- *   never changes.
+ *   scratch colours, mixed in Three.js's working colour space, and the
+ *   back's lines follow it; the back's colour never changes.
  * - One grain texture is the `map` of both sides, multiplying each side's
  *   colour. Its repeat follows the sheet's size and stretch, centred on the
  *   sheet's centre, so the grain keeps its true size and holds still while
@@ -69,22 +76,39 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   grain to the sheet's size and stretch, to call after each
  *   writeStretchScale(); startFrontColorFade(), which sets the front's next
  *   colour, and setFrontColorFade(), which fades the front towards it;
- *   setLinesVisibility(), which fades the fold lines; setSequencePosition(),
- *   which poses the paper along its fold sequence; and setSheet(), which
- *   swaps in another design's sheet.
+ *   setLinesVisibility(), which fades both sides' fold lines;
+ *   setSequencePosition(), which poses the paper along its fold sequence;
+ *   and setSheet(), which swaps in another design's sheet.
  */
 export const createPaper = (frontColor, radiusMeters, sheet) => {
   let shown = createSheetGeometry(radiusMeters, sheet);
-  const linesCanvas = document.createElement("canvas");
-  drawFoldLines(linesCanvas, sheet);
-  const linesMaterial = new MeshBasicMaterial({
-    map: createLinesTexture(linesCanvas),
+  const frontLinesCanvas = document.createElement("canvas");
+  drawFoldLines(frontLinesCanvas, sheet, "front");
+  const frontLinesMaterial = new MeshBasicMaterial({
+    map: createLinesTexture(frontLinesCanvas, SRGBColorSpace),
     opacity: 0,
     side: FrontSide,
     transparent: true,
   });
-  const linesMesh = new Mesh(shown.geometry, linesMaterial);
-  linesMesh.visible = false;
+  const frontLinesMesh = new Mesh(shown.geometry, frontLinesMaterial);
+  frontLinesMesh.visible = false;
+
+  // The mask's green channel scales the opacity, so its white lines show in
+  // the material's colour, and its black ground not at all.
+  const backLinesCanvas = document.createElement("canvas");
+  drawFoldLines(backLinesCanvas, sheet, "back");
+  const backLinesMaterial = new MeshLambertMaterial({
+    alphaMap: createLinesTexture(backLinesCanvas, NoColorSpace),
+    color: frontColor,
+    flatShading: true,
+    opacity: 0,
+    side: BackSide,
+    transparent: true,
+  });
+  const backLinesMesh = new Mesh(shown.geometry, backLinesMaterial);
+  backLinesMesh.receiveShadow = true;
+  backLinesMesh.visible = false;
+
   const grainTexture = createGrainTexture();
   const frontMaterial = createPaperMaterial(
     frontColor,
@@ -105,7 +129,7 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   frontMesh.receiveShadow = true;
   const backMesh = new Mesh(shown.geometry, backMaterial);
   backMesh.receiveShadow = true;
-  const meshes = [frontMesh, backMesh, linesMesh];
+  const meshes = [frontMesh, backMesh, frontLinesMesh, backLinesMesh];
   const stretchGroup = new Group();
   stretchGroup.add(...meshes);
   const group = new Group();
@@ -133,6 +157,7 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   };
 
   /** #### Mixes the front's colour, eased, from the fade's start to its end
+   * - Copies the colour to the back's lines, so they fade in step.
    * - Allocates nothing, so it is safe on the per-frame path.
    * @param progress From 0 (the start colour) to 1 (the end colour), linear
    *   in time.
@@ -143,15 +168,19 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
       fadeToColor,
       smoothstep(progress),
     );
+    backLinesMaterial.color.copy(frontMaterial.color);
   };
 
-  /** #### Fades the fold lines, eased, hiding them altogether at 0
+  /** #### Fades both sides' fold lines, eased, hiding them altogether at 0
    * - Allocates nothing, so it is safe on the per-frame path.
    * @param visibility From 0 (hidden) to 1 (shown), linear in time.
    */
   const setLinesVisibility = (visibility) => {
-    linesMaterial.opacity = smoothstep(visibility);
-    linesMesh.visible = linesMaterial.opacity > 0;
+    const opacity = smoothstep(visibility);
+    frontLinesMaterial.opacity = opacity;
+    backLinesMaterial.opacity = opacity;
+    frontLinesMesh.visible = opacity > 0;
+    backLinesMesh.visible = opacity > 0;
   };
 
   /** #### Poses the paper at a point in its fold sequence
@@ -166,8 +195,9 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   /** #### Swaps in another design's sheet, posed flat
    * - Gives every mesh the new geometry, then disposes of the old one,
    *   which frees its attributes on the GPU; the materials stay.
-   * - Redraws the fold lines' canvas for the new sheet, gives the material
-   *   a new texture of it, and disposes of the old texture: a texture's
+   * - Redraws both sides' fold-line canvases for the new sheet, gives each
+   *   material a new texture of its canvas, the front's `map` and the
+   *   back's `alphaMap`, and disposes of the old textures: a texture's
    *   storage is allocated on its first upload, so it cannot take a
    *   canvas of another size.
    * - Refits the grain to the new sheet, at the stretch scale written so
@@ -182,10 +212,21 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
     for (const mesh of meshes) mesh.geometry = shown.geometry;
     oldGeometry.dispose();
 
-    const oldTexture = linesMaterial.map;
-    drawFoldLines(linesCanvas, nextSheet);
-    linesMaterial.map = createLinesTexture(linesCanvas);
-    oldTexture.dispose();
+    const oldFrontTexture = frontLinesMaterial.map;
+    drawFoldLines(frontLinesCanvas, nextSheet, "front");
+    frontLinesMaterial.map = createLinesTexture(
+      frontLinesCanvas,
+      SRGBColorSpace,
+    );
+    oldFrontTexture.dispose();
+
+    const oldBackTexture = backLinesMaterial.alphaMap;
+    drawFoldLines(backLinesCanvas, nextSheet, "back");
+    backLinesMaterial.alphaMap = createLinesTexture(
+      backLinesCanvas,
+      NoColorSpace,
+    );
+    oldBackTexture.dispose();
 
     fitGrain();
   };
@@ -243,14 +284,16 @@ const createGrainTexture = () => {
   return texture;
 };
 
-/** #### Creates a colour texture of a canvas holding fold lines
+/** #### Creates a texture of a canvas holding fold lines
  * - CanvasTexture's constructor takes no colour space, so it is set after.
  * @param canvas The canvas, already drawn.
+ * @param colorSpace SRGBColorSpace for the front's `map`, a colour, or
+ *   NoColorSpace for the back's `alphaMap`, a coverage mask read linearly.
  * @returns The texture.
  */
-const createLinesTexture = (canvas) => {
+const createLinesTexture = (canvas, colorSpace) => {
   const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
+  texture.colorSpace = colorSpace;
 
   return texture;
 };

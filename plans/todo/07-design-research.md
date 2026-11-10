@@ -346,7 +346,7 @@ For the Lead Developer:
 The first three plans are drafted, and take three of the designs with
 them:
 
-- [Plan 08](./08-fold-lines-both-sides.md): fold lines on both sides,
+- [Plan 08](../done/08-fold-lines-both-sides.md): fold lines on both sides,
   checked on the dart and the hat.
 - [Plan 09](./09-turn-the-paper-over.md): the turn-over step, proved by
   the watermelon, which turns over twice.
