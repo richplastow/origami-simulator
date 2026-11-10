@@ -1,7 +1,7 @@
 /**
  * @fileoverview
  * Entry point: draws a lit square sheet of paper on a transparent canvas,
- * and folds it towards the fold that the buttons choose.
+ * and folds it into the paper dart, or back to flat, as the buttons choose.
  */
 
 import {
@@ -12,11 +12,10 @@ import {
   WebGLRenderer,
 } from "three";
 import { distanceToFitSphere } from "./camera/fit.js";
-import { stepFold } from "./fold/animation.js";
-import {
-  createCreasePattern,
-  PAPER_SIZE_METERS,
-} from "./paper/crease-pattern.js";
+import { PAPER_DART } from "./designs/paper-dart.js";
+import { cutSheet } from "./fold/engine.js";
+import { maxPaperRadius } from "./fold/pose.js";
+import { stepSequence } from "./fold/stepper.js";
 import { createLights } from "./scene/lights.js";
 import { createPaper } from "./scene/paper.js";
 import { connectFoldButtons } from "./ui/fold-buttons.js";
@@ -30,11 +29,11 @@ const FRAME_MARGIN = 1.1; // leaves room around the paper for the buttons
 const MAX_PIXEL_RATIO = 2; // caps GPU cost on high-density screens
 
 const canvas = document.querySelector(".scene");
-const pattern = createCreasePattern(PAPER_SIZE_METERS);
+const sheet = cutSheet(PAPER_DART);
 
-// Every crease passes through the centre, so folding never moves the paper
-// outside the sphere that holds it flat.
-const paperRadiusMeters = pattern.sizeMeters * Math.SQRT1_2;
+// The sphere that holds the paper over its whole fold sequence, so the
+// camera never moves while the paper folds.
+const paperRadiusMeters = maxPaperRadius(sheet);
 
 // An `alpha` canvas clears to transparent, so the page shows through.
 const renderer = new WebGLRenderer({ alpha: true, antialias: true, canvas });
@@ -46,11 +45,11 @@ const camera = new PerspectiveCamera(
   CAMERA_FAR_METERS,
 );
 const timer = new Timer();
-const paper = createPaper(pattern);
+const paper = createPaper(paperRadiusMeters, sheet);
 
 // The paper starts flat, and stays there until a button sets a target.
-const foldState = { angleRadians: 0, creaseId: null };
-const foldTarget = { angleRadians: 0, creaseId: null };
+const sequenceState = { designId: PAPER_DART.id, direction: 0, position: 0 };
+const sequenceTarget = { designId: null, position: 0 };
 
 scene.add(paper.group, ...createLights());
 
@@ -86,17 +85,17 @@ new ResizeObserver(([entry]) => {
   resize(entry.contentRect.width, entry.contentRect.height);
 }).observe(canvas);
 
-// A press mid-fold changes only the target, so the motion carries on from
-// the current angle.
-connectFoldButtons((target) => Object.assign(foldTarget, target));
+// A press mid-fold changes only the target, which the stepper reads once
+// the fold in progress finishes.
+connectFoldButtons((target) => Object.assign(sequenceTarget, target));
 
 // Avoid a large jump in the fold when a hidden tab becomes visible again.
 timer.connect(document);
 
 renderer.setAnimationLoop((timestampMs) => {
   timer.update(timestampMs);
-  if (stepFold(timer.getDelta(), foldState, foldTarget)) {
-    paper.setFold(foldState);
+  if (stepSequence(timer.getDelta(), sequenceState, sequenceTarget)) {
+    paper.setSequencePosition(sequenceState.position);
   }
   renderer.render(scene, camera);
 });

@@ -106,15 +106,19 @@ Settled on 2026-11-09 and 2026-11-10.
     { "angleDegrees": 45, "layers": "all", "type": "valley" },
     { "angleDegrees": -22.5, "layers": "all", "type": "valley" },
     { "angleDegrees": 22.5, "layers": "all", "type": "valley" },
-    { "angleDegrees": 0, "layers": "all", "type": "mountain" },
+    { "angleDegrees": 0, "layers": "all", "type": "valley" },
     { "angleDegrees": 11.25, "layers": "front-half", "type": "valley" },
     { "angleDegrees": 11.25, "layers": "back-half", "type": "mountain" }
   ]
   ```
 
-  Folds 1 to 4 move the outer side of their line. Fold 5 moved the left
-  half behind the right in the prototype. Folds 6 and 7 are the wings:
-  the same line, folded opposite ways by the two halves.
+  Folds 1 to 4 move the outer side of their line. Fold 5 brings the left
+  half in front of the right. The prototype folded it as a mountain,
+  which left the dart seen from below, against [Scope](#scope); a valley
+  was ruled on 2026-11-10, and
+  [Plan 02a's Decision 2](../done/02a-paper-dart.md#decisions) holds the fold
+  list as built. Folds 6 and 7 are the wings: the same line, folded
+  opposite ways by the two halves, the front half first.
 - Prototype results, the same for a 150 mm square and for A4:
   - After four folds: 7 faces, 9 triangles, 4 layers at the deepest.
   - After all seven, wings folded fully flat: 16 faces, 18 triangles,

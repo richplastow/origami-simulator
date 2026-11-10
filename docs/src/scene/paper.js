@@ -1,6 +1,7 @@
 /**
  * @fileoverview
- * The paper sheet: a two-tone, flat-shaded mesh with faint crease lines.
+ * The paper sheet: a two-tone, flat-shaded mesh, posed along its design's
+ * fold sequence.
  */
 
 import {
@@ -10,81 +11,66 @@ import {
   DynamicDrawUsage,
   FrontSide,
   Group,
-  LineBasicMaterial,
-  LineSegments,
   Mesh,
   MeshLambertMaterial,
+  Sphere,
+  Vector3,
 } from "three";
-import { writeFoldedPositions } from "../fold/kinematics.js";
+import { writePaperPositions } from "../fold/pose.js";
 
-const CREASE_LINE_COLOR = 0x000000; // black, faded by its opacity
-const CREASE_LINE_OPACITY = 0.2; // faintly darkens both sides
-const FLAT = { angleRadians: 0, creaseId: null };
 const PAPER_BACK_COLOR = 0xf4f1ea; // off-white
 const PAPER_FRONT_COLOR = 0xd9342b; // origami red
 
-// Push the paper just behind the crease lines that lie on it.
-const PAPER_POLYGON_OFFSET_FACTOR = 1;
-const PAPER_POLYGON_OFFSET_UNITS = 1;
-
-/** #### Creates the paper sheet, flat, from a crease pattern
- * - The front and back meshes and the crease lines share one position
- *   attribute, so the lines always follow the paper.
- * - Bounding spheres are computed once, flat: folding never moves a point
- *   further from the centre.
- * @param pattern The crease pattern that createCreasePattern() returns.
- * @returns The `group` to add to the scene, and setFold(), which reshapes
- *   the paper to a fold state.
+/** #### Creates the paper sheet, flat, from a cut sheet
+ * - Each face has its own vertices and a fan of triangles; each bridging
+ *   strip is two triangles joining the edges of two faces at a crease.
+ * - The front and back meshes share one geometry, whose positions are
+ *   rewritten in place as the paper folds.
+ * - The bounding sphere is set once, to hold the paper over its whole fold
+ *   sequence.
+ * @param radiusMeters The largest distance from the origin that the paper
+ *   reaches over its fold sequence, from maxPaperRadius(), in metres.
+ * @param sheet The sheet that cutSheet() returns.
+ * @returns The `group` to add to the scene, and setSequencePosition(),
+ *   which poses the paper along its fold sequence.
  */
-export const createPaper = (pattern) => {
-  const pointCount = pattern.points.length;
-  const positions = new Float32Array(3 * pointCount);
-  writeFoldedPositions(FLAT, pattern, positions);
+export const createPaper = (radiusMeters, sheet) => {
+  const vertexCount = sheet.faces.reduce(
+    (count, { polygon }) => count + polygon.length,
+    0,
+  );
+  const positions = new Float32Array(3 * vertexCount);
+  writePaperPositions(positions, 0, sheet);
   const positionAttribute = new BufferAttribute(positions, 3).setUsage(
     DynamicDrawUsage,
   );
 
   // Lambert's vertex shader reads `normal`, though flat shading ignores it.
-  const normals = new Float32Array(3 * pointCount);
-  for (let i = 0; i < pointCount; i++) normals[3 * i + 2] = 1;
+  const normals = new Float32Array(3 * vertexCount);
+  for (let i = 0; i < vertexCount; i++) normals[3 * i + 2] = 1;
 
-  const paperGeometry = new BufferGeometry()
+  const geometry = new BufferGeometry()
     .setAttribute("position", positionAttribute)
     .setAttribute("normal", new BufferAttribute(normals, 3))
-    .setIndex(pattern.triangles.flat());
-  paperGeometry.computeBoundingSphere();
-
-  // Each crease is drawn as two segments, centre to each end.
-  const lineGeometry = new BufferGeometry()
-    .setAttribute("position", positionAttribute)
-    .setIndex(pattern.creases.flatMap(({ from, to }) => [0, from, 0, to]));
-  lineGeometry.computeBoundingSphere();
+    .setIndex(createTriangleIndices(sheet));
+  geometry.boundingSphere = new Sphere(new Vector3(), radiusMeters);
 
   const group = new Group();
   group.add(
-    new Mesh(paperGeometry, createPaperMaterial(PAPER_FRONT_COLOR, FrontSide)),
-    new Mesh(paperGeometry, createPaperMaterial(PAPER_BACK_COLOR, BackSide)),
-    new LineSegments(
-      lineGeometry,
-      new LineBasicMaterial({
-        color: CREASE_LINE_COLOR,
-        opacity: CREASE_LINE_OPACITY,
-        transparent: true,
-      }),
-    ),
+    new Mesh(geometry, createPaperMaterial(PAPER_FRONT_COLOR, FrontSide)),
+    new Mesh(geometry, createPaperMaterial(PAPER_BACK_COLOR, BackSide)),
   );
 
-  /** #### Reshapes the paper to a fold state
+  /** #### Poses the paper at a point in its fold sequence
    * - Allocates nothing, so it is safe on the per-frame path.
-   * @param foldState The fold: `angleRadians`, and `creaseId`, null when
-   *   flat.
+   * @param sequencePosition From 0 (flat) to the design's fold count.
    */
-  const setFold = (foldState) => {
-    writeFoldedPositions(foldState, pattern, positions);
+  const setSequencePosition = (sequencePosition) => {
+    writePaperPositions(positions, sequencePosition, sheet);
     positionAttribute.needsUpdate = true;
   };
 
-  return { group, setFold };
+  return { group, setSequencePosition };
 };
 
 /** #### Creates a matte, flat-shaded material for one side of the paper
@@ -95,11 +81,29 @@ export const createPaper = (pattern) => {
  * @returns The material.
  */
 const createPaperMaterial = (color, side) =>
-  new MeshLambertMaterial({
-    color,
-    flatShading: true,
-    polygonOffset: true,
-    polygonOffsetFactor: PAPER_POLYGON_OFFSET_FACTOR,
-    polygonOffsetUnits: PAPER_POLYGON_OFFSET_UNITS,
-    side,
-  });
+  new MeshLambertMaterial({ color, flatShading: true, side });
+
+/** #### Lists the vertex indices of every triangle of the paper
+ * - Every triangle runs anticlockwise seen from the front of the paper, so
+ *   the front material draws the front.
+ * @param sheet The sheet that cutSheet() returns.
+ * @returns Three indices per triangle.
+ */
+const createTriangleIndices = (sheet) => {
+  const indices = [];
+  let firstVertex = 0;
+  for (const { polygon } of sheet.faces) {
+    for (let i = 1; i < polygon.length - 1; i++) {
+      indices.push(firstVertex, firstVertex + i, firstVertex + i + 1);
+    }
+    firstVertex += polygon.length;
+  }
+
+  // A strip lies between its two edges, so it runs from one face's edge,
+  // backwards, to the other's.
+  for (const [a0, a1, b0, b1] of sheet.bridges) {
+    indices.push(a1, a0, b0, a1, b0, b1);
+  }
+
+  return indices;
+};

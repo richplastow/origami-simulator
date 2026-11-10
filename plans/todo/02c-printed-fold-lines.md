@@ -12,7 +12,7 @@ type: plan
   rest is blank. A "Fold lines" checkbox, ticked at load, switches them
   off and on.
 - Depends on [Plan 02b](02b-paper-hat.md), and through it on
-  [Plan 02a](02a-paper-dart.md): it extends `cutSheet()` in
+  [Plan 02a](../done/02a-paper-dart.md): it extends `cutSheet()` in
   `docs/src/fold/engine.js`, `stepSequence()` in
   `docs/src/fold/stepper.js` with its stretch phase, and `createPaper()`
   in `docs/src/scene/paper.js` with `setSheet()`.
@@ -31,7 +31,7 @@ type: plan
 
 ## Definitions
 
-The terms of [Plan 02a](02a-paper-dart.md#definitions) and
+The terms of [Plan 02a](../done/02a-paper-dart.md#definitions) and
 [Plan 02b](02b-paper-hat.md#definitions) apply. Two more:
 
 - **Crease pattern**: every line along which a design folds, drawn on the

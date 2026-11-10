@@ -10,7 +10,7 @@ type: plan
   button, and the switch between designs: the paper unfolds, the flat
   sheet stretches from one shape to the other, and the new design folds.
   Still no fold lines are drawn.
-- Depends on [Plan 02a](02a-paper-dart.md), which builds the fold engine
+- Depends on [Plan 02a](../done/02a-paper-dart.md), which builds the fold engine
   (`docs/src/fold/engine.js`), the pose maths (`docs/src/fold/pose.js`),
   the stepper (`docs/src/fold/stepper.js`), the sheet sizes
   (`docs/src/designs/sheet.js`) and the dart (`PAPER_DART`). This plan
@@ -32,7 +32,7 @@ type: plan
 
 ## Definitions
 
-The terms of [Plan 02a](02a-paper-dart.md#definitions) apply. Two more:
+The terms of [Plan 02a](../done/02a-paper-dart.md#definitions) apply. Two more:
 
 - **Front layer, back layer**: after the hat's first fold, which folds the
   sheet in half, the half that stayed put lies in front and the half that
@@ -48,7 +48,7 @@ The terms of [Plan 02a](02a-paper-dart.md#definitions) apply. Two more:
    0.126134 × 0.178381 m (126.1 × 178.4 mm) at the square's area, per
    [Scope](02-simple-folds-research.md#scope). The brim is 26.1 mm.
 2. **The hat's folds**, in the shape of
-   [Plan 02a's Decision 2](02a-paper-dart.md#decisions), all to π with
+   [Plan 02a's Decision 2](../done/02a-paper-dart.md#decisions), all to π with
    `turns: "moving-side"`, computed on 2026-11-10 from the research's
    lines (`w` = 126.134 mm):
 
