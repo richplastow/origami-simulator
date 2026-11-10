@@ -20,7 +20,7 @@ type: plan
   where paper is lifted. [Decision 7](#decisions) is the way out if
   the shadows cannot be made clean.
 - Depends on [Plan 02c](../done/02c-printed-fold-lines.md) and on
-  [Plan 03](03-spin-the-paper.md), whose spin shows the shadows best.
+  [Plan 03](../done/03-spin-the-paper.md), whose spin shows the shadows best.
   It follows [Plan 04](04-paper-colours.md) and
   [Plan 05](05-paper-grain.md), which it must leave as they are.
 - Rests on Three.js's

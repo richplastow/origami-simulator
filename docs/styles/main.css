@@ -19,13 +19,26 @@ body {
   color: CanvasText;
 }
 
-/* The WebGL canvas stays transparent and fills the viewport behind the page. */
+/*
+ * The WebGL canvas stays transparent and fills the viewport behind the page.
+ * A drag on it spins the paper, so the browser neither scrolls nor zooms on
+ * a touch drag, and selects no text on a mouse drag; Safari still needs the
+ * prefixed property.
+ */
 .scene {
   position: fixed;
   inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.scene:active {
+  cursor: grabbing;
 }
 
 /* Positioned, and later in the document, so it paints over the canvas. */

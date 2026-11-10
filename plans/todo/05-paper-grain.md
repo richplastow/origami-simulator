@@ -19,7 +19,7 @@ type: plan
 - Depends on [Plan 02c](../done/02c-printed-fold-lines.md), whose `uv`
   attribute in `docs/src/scene/paper.js` holds each vertex's sheet
   coordinates, and on [Plan 02b](../done/02b-paper-hat.md)'s stretch.
-  It follows [Plan 03](03-spin-the-paper.md) and
+  It follows [Plan 03](../done/03-spin-the-paper.md) and
   [Plan 04](04-paper-colours.md): its Manual QA spins the paper and
   changes its colour.
 - Feeds [Plan 06](06-self-shadows.md).

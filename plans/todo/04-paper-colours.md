@@ -18,7 +18,7 @@ type: plan
   that black lines will not show on a dark paper colour.
 - Depends on [Plan 02c](../done/02c-printed-fold-lines.md), whose fold lines
   must stay readable and whose checkbox shares the control bar. It
-  follows [Plan 03](03-spin-the-paper.md) but needs nothing from it.
+  follows [Plan 03](../done/03-spin-the-paper.md) but needs nothing from it.
 - Feeds [Plan 05](05-paper-grain.md), whose grain multiplies whichever
   colour is showing.
 - Rests on

@@ -4,7 +4,8 @@
  * folds it into the paper dart or the paper hat, or back to flat, as the
  * buttons choose, stretching the flat sheet from one design's shape to the
  * other's between them, with each design's fold lines printed on it while
- * the "Fold lines" checkbox is ticked.
+ * the "Fold lines" checkbox is ticked, and turns it like a turntable as a
+ * drag on the canvas moves.
  */
 
 import {
@@ -21,6 +22,8 @@ import { writeStretchScale } from "./designs/sheet.js";
 import { cutSheet } from "./fold/engine.js";
 import { maxPaperRadius } from "./fold/pose.js";
 import { stepSequence } from "./fold/stepper.js";
+import { connectDrag } from "./input/drag.js";
+import { turnSpin } from "./input/spin.js";
 import { createLights } from "./scene/lights.js";
 import { createPaper } from "./scene/paper.js";
 import { connectFoldButtons } from "./ui/fold-buttons.js";
@@ -32,7 +35,13 @@ const CAMERA_FAR_METERS = 10;
 const CAMERA_FOV_DEGREES = 30; // vertical; PerspectiveCamera takes degrees
 const CAMERA_NEAR_METERS = 0.01;
 const FRAME_MARGIN = 1.1; // leaves room around the paper for the buttons
+
+// The tilt stops where the view looks straight down or straight up the
+// paper's vertical axis. Past either limit, a drag right would carry the
+// paper's near surface left.
+const MAX_PITCH_RADIANS = Math.PI / 2 - CAMERA_ELEVATION_RADIANS;
 const MAX_PIXEL_RATIO = 2; // caps GPU cost on high-density screens
+const MIN_PITCH_RADIANS = -(Math.PI / 2 + CAMERA_ELEVATION_RADIANS);
 
 const canvas = document.querySelector(".scene");
 
@@ -77,6 +86,9 @@ const paper = createPaper(paperRadiusMeters, sheets[sequenceState.designId]);
 // The design whose sheet the paper's geometry holds.
 let shownDesignId = sequenceState.designId;
 
+// The paper's turntable spin, which only a reload resets.
+const spin = { pitchRadians: 0, yawRadians: 0 };
+
 scene.add(paper.group, ...createLights());
 
 /** #### Matches the camera and drawing buffer to the canvas's CSS size
@@ -117,6 +129,19 @@ new ResizeObserver(([entry]) => {
 connectFoldButtons((target) => Object.assign(sequenceTarget, target));
 connectFoldLinesToggle((linesOn) => {
   sequenceTarget.linesOn = linesOn;
+});
+
+// With the default order `XYZ`, the paper turns about its own vertical
+// axis first and tilts towards the viewer second.
+connectDrag(canvas, (deltaXPixels, deltaYPixels) => {
+  turnSpin(
+    deltaXPixels,
+    deltaYPixels,
+    MAX_PITCH_RADIANS,
+    MIN_PITCH_RADIANS,
+    spin,
+  );
+  paper.group.rotation.set(spin.pitchRadians, spin.yawRadians, 0);
 });
 
 // Avoid a large jump in the fold when a hidden tab becomes visible again.

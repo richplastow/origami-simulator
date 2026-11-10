@@ -11,21 +11,21 @@ type: plan
   vertical axis and up and down as a tilt, so every side of a folded
   design can be seen. The camera and the lights never move.
 - Implements the polish rulings in
-  [Scope](../done/02-simple-folds-research.md#scope) of
-  [02-simple-folds-research.md](../done/02-simple-folds-research.md): the spin
+  [Scope](./02-simple-folds-research.md#scope) of
+  [02-simple-folds-research.md](./02-simple-folds-research.md): the spin
   runs through the app's own pointer handler, not OrbitControls, so no
   addon is vendored; the canvas stays transparent, and the scene holds
   only the paper. With nothing else in the scene, spinning the paper
   under fixed lights draws the same picture as orbiting the camera and
   the lights together.
-- Depends on [Plan 02c](../done/02c-printed-fold-lines.md), and through it on
-  [Plan 02a](../done/02a-paper-dart.md) and
-  [Plan 02b](../done/02b-paper-hat.md): `createPaper()` in
+- Depends on [Plan 02c](./02c-printed-fold-lines.md), and through it on
+  [Plan 02a](./02a-paper-dart.md) and
+  [Plan 02b](./02b-paper-hat.md): `createPaper()` in
   `docs/src/scene/paper.js` returns `group`, which holds the stretch
   group and is free to turn, and `docs/src/main.js` fits the camera to a
   sphere centred on the origin, so the paper stays in view at any angle.
-- Feeds [Plan 04](04-paper-colours.md), [Plan 05](05-paper-grain.md) and
-  [Plan 06](06-self-shadows.md), whose shadows show best on a spun dart.
+- Feeds [Plan 04](../todo/04-paper-colours.md), [Plan 05](../todo/05-paper-grain.md) and
+  [Plan 06](../todo/06-self-shadows.md), whose shadows show best on a spun dart.
 - Rests on
   [pointer events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events),
   [`setPointerCapture()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setPointerCapture),
@@ -66,7 +66,9 @@ type: plan
    `main.js` derives both from that constant. Past those limits a drag
    to the right would carry the near surface left. The yaw has no
    limit and is not wrapped: every angle is a valid turn. At either
-   limit a flat, unturned sheet is seen edge-on.
+   limit the paper's vertical axis points at the camera, so a flat
+   sheet, which lies along that axis, is seen edge-on however far it has
+   turned.
 4. **Maths apart from input**: `turnSpin(deltaXPixels, deltaYPixels,
    maxPitchRadians, minPitchRadians, spin)` in `docs/src/input/spin.js`
    imports nothing and writes `spin` in place, so Node can run it.
@@ -75,9 +77,12 @@ type: plan
 5. **Pointer capture is the drag's only state**: on a `pointerdown` from
    the primary pointer's primary button (`isPrimary`, and `button` 0),
    `connectDrag()` captures the pointer and notes its `clientX` and
-   `clientY`; on each `pointermove` for which
+   `clientY`; on each `pointermove` from the primary pointer for which
    `element.hasPointerCapture(event.pointerId)` holds, it reports the
-   change since the last event. The browser releases the capture on
+   change since the last event. Both tests are needed: a touch captures
+   its pointer implicitly
+   ([Pointer Events](https://www.w3.org/TR/pointerevents3/#implicit-pointer-capture)),
+   a second finger's included. The browser releases the capture on
    `pointerup` and `pointercancel`, so the drag needs no flag and no
    listener for its end. A captured pointer keeps reporting when it
    passes over the buttons or leaves the window. Mouse, touch and pen
@@ -139,8 +144,8 @@ type: plan
   `aria-label` in `docs/index.html` (Decision 9).
 - It should turn the paper about its centre as the pointer drags, the
   near surface following the pointer (Manual QA 2).
-- It should show the back of the paper evenly lit, with no fold lines
-  on it (Manual QA 2).
+- It should show the back of the paper evenly lit (Manual QA 2), with
+  no fold lines on it (Manual QA 3).
 - It should keep folding, unfolding and stretching inside the spun
   view, and keep the spin through "Flat" and a switch (Manual QA 3, 6).
 - It should stop tilting at straight above and straight below, and hold
@@ -161,14 +166,16 @@ type: plan
 
 1. Do: `grep -c 'setPointerCapture\|hasPointerCapture' docs/src/input/drag.js`
    Expect: `2` or more
-2. Do: `grep -c 'touch-action: none\|user-select: none\|cursor: grab' docs/styles/main.css`
+2. Do: `grep -c 'isPrimary' docs/src/input/drag.js`
+   Expect: `2` or more (the press and each move test it)
+3. Do: `grep -c 'touch-action: none\|user-select: none\|cursor: grab' docs/styles/main.css`
    Expect: `5` (`touch-action: none`, `user-select: none`,
    `-webkit-user-select: none`, `cursor: grab` and `cursor: grabbing`)
-3. Do: `grep -c 'OrbitControls\|three/addons' docs/src/main.js docs/src/input/drag.js docs/src/input/spin.js`
+4. Do: `grep -c 'OrbitControls\|three/addons' docs/src/main.js docs/src/input/drag.js docs/src/input/spin.js`
    Expect: `0` for each file
-4. Do: `grep -c 'seen from slightly above' docs/index.html`
+5. Do: `grep -c 'seen from slightly above' docs/index.html`
    Expect: `0`
-5. Do: the [Agent checks](../../CLAUDE.md#agent-checks) in CLAUDE.md,
+6. Do: the [Agent checks](../../CLAUDE.md#agent-checks) in CLAUDE.md,
    `curl`ing `/`, every file under `docs/src/` and
    `docs/styles/main.css`.
    Expect: every check passes; each file returns status 200.
@@ -193,21 +200,27 @@ hard-reload (Shift+Cmd+R).
      errors or warnings.
 2. **Do:** press on the paper, drag slowly right by about 100 px, and
    pause; then keep dragging right for another 300 px, and release.
+   Then press again, drag down by about 50 px, and release.
    - **Expect:** a closed-hand cursor while pressed. The paper turns
      about its vertical axis, its surface following the pointer: after
      100 px it has turned about 45°, its right edge further away. At
      about 200 px it is edge-on; then its off-white back comes round,
-     as evenly lit as the front was, with no fold lines on it.
+     as evenly lit as the front was. The drag down tilts the paper's
+     top edge towards the viewer, its near surface following the
+     pointer down.
    - **Why:** a wrong sign turns the paper against the drag; a wrong
-     axis order makes it wobble.
+     axis order, the yaw applied after the pitch, tilts the half-turned
+     paper against the drag down.
 3. **Do:** click "Paper Dart", and drag in slow circles while it folds.
    - **Expect:** the dart folds as before, inside the turning view; the
-     fold lines turn with the paper. Nothing stutters or jumps.
+     fold lines turn with the paper, and show on its red side only,
+     never on the off-white. Nothing stutters or jumps.
 4. **Do:** with the dart folded, drag down until the tilt stops, then a
    further 500 px, then drag up by 10 px. Repeat upwards.
    - **Expect:** the tilt stops dead once the view looks straight down
-     on what was the sheet's top edge, and straight up at its bottom
-     edge the other way. After the extra 500 px, the first pixels of
+     the paper's vertical axis, from above its top edge, and straight
+     up it, from below its bottom edge, the other way. After the extra
+     500 px, the first pixels of
      the drag back tilt the dart at once, so the angle stopped where
      the picture did.
    - **Why:** a clamp on the picture alone leaves a dead zone on the
@@ -222,8 +235,8 @@ hard-reload (Shift+Cmd+R).
    - **Expect:** the dart unfolds, the sheet stretches and the hat
      folds, all in the spun view; the view never snaps back to the
      front.
-7. **Do:** resize the window, narrow then wide, while dragging the
-   paper round.
+7. **Do:** resize the window narrow, and drag the paper round through
+   several angles; then resize it wide, and drag again.
    - **Expect:** the paper stays centred and whole at every angle; no
      corner is cut off, and nothing stretches or blurs.
 8. **Do:** press the right mouse button on the paper and drag; dismiss
@@ -238,9 +251,14 @@ hard-reload (Shift+Cmd+R).
 
 10. **Do:** in device mode, choose a phone such as iPhone 12 Pro
     (390 × 844), reload, and drag the paper with one "finger"; on a
-    real phone, also put a second finger down and pinch.
+    real phone, also put a second finger down a hand's width away, then
+    move both fingers and pinch.
     - **Expect:** the paper spins; the page neither scrolls nor zooms;
-      the second finger does nothing.
+      the paper follows the first finger only, and never jumps when the
+      second finger lands or moves.
+    - **Why:** a touch captures its pointer implicitly, so a drag that
+      tested capture alone would take the second finger's moves as
+      jumps from the first finger's position.
 11. **Do:** in the Performance panel, record five seconds of continuous
     dragging while the dart folds. Then record the dart folding with no
     drag.
@@ -250,7 +268,8 @@ hard-reload (Shift+Cmd+R).
 **Looks wrong, but isn't:**
 
 - A flat sheet seen edge-on vanishes, since the paper has no thickness.
-  At either tilt limit a flat, unturned sheet is edge-on.
+  At either tilt limit a flat sheet is edge-on, however far it has
+  turned.
 - A drag that starts on the title, on a button, or in the gaps of the
   button bar does not spin the paper: those elements lie over the
   canvas.
@@ -272,3 +291,51 @@ hard-reload (Shift+Cmd+R).
   `SPIN_RADIANS_PER_PIXEL = 0.008`; the tilt limits at straight above
   and below, where a flat sheet is edge-on; the canvas's new
   `aria-label`; and no glide, reset gesture or keyboard spin.
+- **2026-11-10T11:19:46Z** — **reviewed**: no major findings; Decisions
+  1 to 3 tested in a scratch script against r187's Euler, Matrix4 and
+  Quaternion source, with the camera as `main.js` places it (signs,
+  limits and edge-on all hold, edge-on at any yaw); minor fixes:
+  Decision 3 and "Looks wrong" say a flat sheet is edge-on at either
+  limit however turned, Manual QA 2 gains a drag down that catches a
+  wrong axis order, the back's missing fold lines move to Manual QA 3
+  (none show before a design is chosen), Manual QA 4's stop and 7's
+  resize reworded so they can be run.
+- **2026-11-10T11:22:25Z** — **implemented**: Steps 1 and 2; added
+  `docs/src/input/spin.js` and `docs/src/input/drag.js`; changed
+  `docs/src/main.js` (spin state, `MAX_PITCH_RADIANS` and
+  `MIN_PITCH_RADIANS` from `CAMERA_ELEVATION_RADIANS`, `connectDrag()`
+  on the canvas), `.scene` in `docs/styles/main.css` and the canvas's
+  `aria-label` in `docs/index.html`; `Euler.set()` checked against r187
+  source; every Agent QA line failed before the work and passes after;
+  the new `aria-label` line is 99 columns, which no wrap can shorten
+  without changing the label; Manual QA walked against the code and
+  unchanged.
+- **2026-11-10T11:22:25Z** — **verified**: agent checks pass: 17 modules
+  parse, no long lines but the favicon's `data:` URL and the
+  `aria-label`, `/` and all 17 modules and `styles/main.css` served
+  with 200, vendored checksums match; browser not run.
+- **2026-11-10T11:27:30Z** — **quality-checked**: Fixed: a second finger's
+  moves reached the drag, as a touch captures its pointer implicitly
+  (Pointer Events 3, implicit capture), so `hasPointerCapture()` held for
+  it and each of its moves turned the paper by the gap between the two
+  fingers; `pointermove` in `docs/src/input/drag.js` now also tests
+  `isPrimary`; Decision 5, Step 2 Agent QA 2 (new, later lines renumbered)
+  and Manual QA 10 updated to match. Deferred: a mouse drag carries on
+  if the left button is released while the right stays held, since
+  `pointerup` waits for the last button (rare, and Manual QA 8's
+  right-button-only press still holds); a pen eraser on a touchscreen is
+  implicitly captured and primary, so it would spin the paper (niche);
+  the 99-column `aria-label` line stays, as settled at implementation.
+  Verified fine: all 11 `turnSpin()` mutants (signs, swapped axes, each
+  clamp dropped or swapped, degrees, clamp before add, yaw overwritten)
+  caught by Step 1 Agent QA 1 and 2; zero and negative drags and a drag
+  back from the limit; `Euler.set(x, y, z, order = this._order)` and
+  `DEFAULT_ORDER = 'XYZ'` in r187 source; per-frame path, resources and
+  resize untouched by this work, and the handler allocates nothing;
+  outer `group` rotated nowhere else; no dependency added; Manual QA
+  walked, only 10 changed; agent checks pass with 16 modules (the
+  implementation entry’s 17 was a miscount); browser not run.
+- **2026-11-10T11:33:41Z** — **done**: the Lead Developer passed the
+  manual QA, walked from the `/orchestrate-plan` readout;
+  `SPIN_RADIANS_PER_PIXEL` kept at 0.008, and the two deferred rare
+  cases (left released while right held, a pen eraser) left as they are.
