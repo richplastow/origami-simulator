@@ -27,7 +27,7 @@
       aria-label="A sheet of origami paper, which folds into simple designs and turns when dragged"
     ></canvas>
     <h1>Origami Simulator</h1>
-    <div class="fold-buttons">
+    <div class="controls">
       <button type="button" data-fold="flat">Flat</button>
       <button type="button" data-fold="paper-dart">Paper Dart</button>
       <button type="button" data-fold="paper-hat">Paper Hat</button>
@@ -35,6 +35,39 @@
         <input type="checkbox" checked data-fold-lines />
         Fold lines
       </label>
+      <div class="paper-colors" role="radiogroup" aria-label="Paper colour">
+        <input
+          type="radio"
+          name="paper-color"
+          value="red"
+          aria-label="Red"
+          checked
+        />
+        <input
+          type="radio"
+          name="paper-color"
+          value="yellow"
+          aria-label="Yellow"
+        />
+        <input
+          type="radio"
+          name="paper-color"
+          value="green"
+          aria-label="Green"
+        />
+        <input
+          type="radio"
+          name="paper-color"
+          value="blue"
+          aria-label="Blue"
+        />
+        <input
+          type="radio"
+          name="paper-color"
+          value="pink"
+          aria-label="Pink"
+        />
+      </div>
     </div>
   </body>
 </html>

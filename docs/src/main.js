@@ -4,8 +4,9 @@
  * folds it into the paper dart or the paper hat, or back to flat, as the
  * buttons choose, stretching the flat sheet from one design's shape to the
  * other's between them, with each design's fold lines printed on it while
- * the "Fold lines" checkbox is ticked, and turns it like a turntable as a
- * drag on the canvas moves.
+ * the "Fold lines" checkbox is ticked, fades its front to the colour the
+ * swatches choose, and turns it like a turntable as a drag on the canvas
+ * moves.
  */
 
 import {
@@ -25,7 +26,9 @@ import { stepSequence } from "./fold/stepper.js";
 import { connectDrag } from "./input/drag.js";
 import { turnSpin } from "./input/spin.js";
 import { createLights } from "./scene/lights.js";
+import { PAPER_COLORS, stepColorFade } from "./scene/paper-colors.js";
 import { createPaper } from "./scene/paper.js";
+import { connectColorSwatches } from "./ui/color-swatches.js";
 import { connectFoldButtons } from "./ui/fold-buttons.js";
 import { connectFoldLinesToggle } from "./ui/fold-lines-toggle.js";
 
@@ -81,7 +84,23 @@ const sequenceState = {
   stretchProgress: 1,
 };
 const sequenceTarget = { designId: null, linesOn: true, position: 0 };
-const paper = createPaper(paperRadiusMeters, sheets[sequenceState.designId]);
+
+// The front's colour fade, done at load: the paper takes the checked
+// swatch's colour from its first frame. A new choice starts at once,
+// whatever the fold sequence is doing, from the colour then showing. The
+// swatches connect first, since a browser may restore a radio's state on
+// reload; their `change` events fire only after this module has run, so
+// `paper` exists by then.
+const colorFade = { progress: 1 };
+const frontColorId = connectColorSwatches(PAPER_COLORS, (colorId) => {
+  paper.startFrontColorFade(PAPER_COLORS[colorId]);
+  colorFade.progress = 0;
+});
+const paper = createPaper(
+  PAPER_COLORS[frontColorId],
+  paperRadiusMeters,
+  sheets[sequenceState.designId],
+);
 
 // The design whose sheet the paper's geometry holds.
 let shownDesignId = sequenceState.designId;
@@ -149,7 +168,8 @@ timer.connect(document);
 
 renderer.setAnimationLoop((timestampMs) => {
   timer.update(timestampMs);
-  if (stepSequence(timer.getDelta(), designs, sequenceState, sequenceTarget)) {
+  const deltaSeconds = timer.getDelta();
+  if (stepSequence(deltaSeconds, designs, sequenceState, sequenceTarget)) {
     // The design changes only at rest, with the paper flat.
     if (sequenceState.designId !== shownDesignId) {
       shownDesignId = sequenceState.designId;
@@ -160,6 +180,11 @@ renderer.setAnimationLoop((timestampMs) => {
 
     // Written on every change, so the scale ends on exactly 1.
     writeStretchScale(designs, paper.stretchScale, sequenceState);
+  }
+
+  // True on the step that reaches 1, so the fade ends on exactly its colour.
+  if (stepColorFade(deltaSeconds, colorFade)) {
+    paper.setFrontColorFade(colorFade.progress);
   }
   renderer.render(scene, camera);
 });

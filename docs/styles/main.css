@@ -1,14 +1,19 @@
 /*
  * The page follows the operating system's light or dark mode through
  * `color-scheme` and the system colours `Canvas` and `CanvasText`, so it
- * needs no media query. The paper keeps its own colours, set in
- * src/scene/paper.js, whatever the colour scheme.
+ * needs no media query. The paper keeps its own colours whatever the colour
+ * scheme: its back's is set in src/scene/paper.js, and the colours its
+ * front can take in src/scene/paper-colors.js, from which
+ * src/ui/color-swatches.js also paints the swatches.
  */
 
 :root {
-  --fold-buttons-gap: 0.5rem; /* between neighbouring buttons */
-  --fold-buttons-offset: 1.5rem; /* from the viewport's bottom edge */
+  --controls-gap: 0.5rem; /* between neighbouring controls, and swatches */
+  --controls-offset: 1.5rem; /* from the viewport's bottom edge */
   --fold-lines-gap: 0.25rem; /* between the checkbox and its text */
+  --swatch-ring-gap: 2px; /* page colour between a swatch and its ring */
+  --swatch-ring-width: 2px; /* the ring round the chosen swatch */
+  --swatch-size: 1.5rem; /* 24px by default: WCAG 2.2's minimum target */
 
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
@@ -47,19 +52,51 @@ h1 {
 }
 
 /* Fixed, and later in the document, so it paints over the canvas. */
-.fold-buttons {
+.controls {
   position: fixed;
   inset-inline: 0;
-  bottom: var(--fold-buttons-offset);
+  bottom: var(--controls-offset);
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--fold-buttons-gap);
+  gap: var(--controls-gap);
 }
 
 /* The fold-lines checkbox sits beside the buttons, centred on their line. */
-.fold-buttons label {
+.controls label {
   display: inline-flex;
   align-items: center;
   gap: var(--fold-lines-gap);
+}
+
+/* The swatches come last in the bar, centred on the buttons' line. */
+.paper-colors {
+  display: flex;
+  align-items: center;
+  gap: var(--controls-gap);
+}
+
+/*
+ * Each swatch is a radio input drawn as a plain square of its colour, which
+ * src/ui/color-swatches.js sets as `--swatch-color`.
+ */
+.paper-colors input {
+  appearance: none;
+  width: var(--swatch-size);
+  height: var(--swatch-size);
+  margin: 0;
+  border: none;
+  background-color: var(--swatch-color);
+  cursor: pointer;
+}
+
+/*
+ * The chosen swatch's ring is a box-shadow, a gap of page colour inside a
+ * ring of text colour. An outline here would override the browser's own
+ * focus ring, and focus lands on the chosen swatch.
+ */
+.paper-colors input:checked {
+  box-shadow:
+    0 0 0 var(--swatch-ring-gap) Canvas,
+    0 0 0 calc(var(--swatch-ring-gap) + var(--swatch-ring-width)) CanvasText;
 }

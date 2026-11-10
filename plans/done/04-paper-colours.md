@@ -11,15 +11,15 @@ type: plan
   colour. The off-white back never changes, so the paper stays
   two-tone.
 - Implements the polish rulings in
-  [Scope](../done/02-simple-folds-research.md#scope) of
-  [02-simple-folds-research.md](../done/02-simple-folds-research.md), and
+  [Scope](./02-simple-folds-research.md#scope) of
+  [02-simple-folds-research.md](./02-simple-folds-research.md), and
   answers its warning under
-  [Printed fold lines](../done/02-simple-folds-research.md#printed-fold-lines)
+  [Printed fold lines](./02-simple-folds-research.md#printed-fold-lines)
   that black lines will not show on a dark paper colour.
-- Depends on [Plan 02c](../done/02c-printed-fold-lines.md), whose fold lines
+- Depends on [Plan 02c](./02c-printed-fold-lines.md), whose fold lines
   must stay readable and whose checkbox shares the control bar. It
-  follows [Plan 03](../done/03-spin-the-paper.md) but needs nothing from it.
-- Feeds [Plan 05](05-paper-grain.md), whose grain multiplies whichever
+  follows [Plan 03](./03-spin-the-paper.md) but needs nothing from it.
+- Feeds [Plan 05](../todo/05-paper-grain.md), whose grain multiplies whichever
   colour is showing.
 - Rests on
   [radio inputs](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/radio),
@@ -50,10 +50,36 @@ type: plan
    | `blue`   | Blue   | `0x3d8fd9` | 6.13                |
    | `pink`   | Pink   | `0xe8739f` | 7.38                |
 
+   `PAPER_COLORS` maps each id to its colour as a hex number, in the
+   table's order; each name lives only in its swatch's `aria-label`
+   (Decision 3). As JSON, which has no hex, it reads:
+
+   ```json
+   {
+     "red": 14234667,
+     "yellow": 15906354,
+     "green": 5221978,
+     "blue": 4034521,
+     "pink": 15233951
+   }
+   ```
+
 3. **Swatches are radio inputs**: one colour of several is a radio
    group, so the chosen swatch is marked, and Tab and the arrow keys
    work, with no JavaScript. Each is styled with `appearance: none` as
    a plain square; the `:checked` one carries a ring in `CanvasText`.
+   - The ring is a `box-shadow`, not an `outline`: an author `outline`
+     on `:checked` would override the browser's own `:focus-visible`
+     outline, so the focused swatch, which is the checked one, would
+     show no focus ring.
+   - Its sizes are custom properties in `docs/styles/main.css`, open to
+     tuning by eye at Manual QA 1 and 8: `--swatch-size: 1.5rem`
+     (24 CSS px at the default font size, WCAG 2.2's
+     [minimum target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)),
+     `--swatch-ring-gap: 2px` (page colour between swatch and ring) and
+     `--swatch-ring-width: 2px`. Swatches are spaced by
+     `--controls-gap` (Decision 7).
+
    The group comes last in the control bar, in the table's order, with
    red checked:
 
@@ -88,11 +114,13 @@ type: plan
      { "progress": 0.5 }
      ```
 
-   - `createPaper()` takes the front's colour at creation. Its
+   - `createPaper(frontColor, radiusMeters, sheet)` takes the front's
+     colour, a hex number, at creation. Its
      `startFrontColorFade(color)` notes the colour now showing as the
      fade's start and `color` as its end, in two scratch `Color`s;
-     `setFrontColorFade(progress)` mixes them into the front material
-     with
+     `setFrontColorFade(progress)` eases its linear `progress` with
+     smoothstep(), as `setLinesVisibility()` does, and mixes them into
+     the front material with
      [`Color.lerpColors()`](https://github.com/mrdoob/three.js/blob/r187/src/math/Color.js),
      and allocates nothing. Colours mix in Three.js's working colour
      space, as its default colour management has it.
@@ -100,7 +128,10 @@ type: plan
    paper is doing, since it touches nothing in the fold sequence. A
    change during a fade starts again from the colour then showing. At
    load, the paper takes the checked swatch's colour with no fade,
-   since a browser may restore a radio's state on reload.
+   since a browser may restore a radio's state on reload: `main.js`
+   connects the swatches before it creates the paper, passes the
+   returned id's colour to `createPaper()`, and starts the fade's state
+   at `{ progress: 1 }`, done.
 7. **The control bar is renamed**: `.fold-buttons` becomes `.controls`
    in `docs/index.html` and `docs/styles/main.css`, with its custom
    properties (`--controls-gap`, `--controls-offset`), since it now
@@ -120,6 +151,8 @@ type: plan
 - It should run a fade from 0 to 1 in `PAPER_COLOR_FADE_SECONDS`, and
   report when nothing is left to change (Agent QA 2).
 - It should import nothing, so Node can run it (Agent QA 3).
+- It should leave the fade where it is, and report no change, for a zero
+  or negative delta (Agent QA 4).
 
 **Agent QA**
 
@@ -129,6 +162,8 @@ type: plan
    Expect: `true 0.5000 true 1 false`
 3. Do: `grep -c '^import' docs/src/scene/paper-colors.js`
    Expect: `0`
+4. Do: `node --input-type=module -e 'import { stepColorFade } from "./docs/src/scene/paper-colors.js"; const f = { progress: 0.25 }; console.log(stepColorFade(0, f), stepColorFade(-1, f), f.progress);'`
+   Expect: `false false 0.25`
 
 ### Step 2: The swatches, and the paper's fade
 
@@ -190,7 +225,7 @@ colours kept or retuned by eye at Manual QA 3 and 4.
 hard-reload (Shift+Cmd+R).
 
 1. **Do:** look at the page after loading.
-   - **Expect:** the red square, red from its first frame. Along the
+   - **Expect:** the paper, red from its first frame. Along the
      bottom, after the "Fold lines" checkbox, a row of plain squares of
      colour, one for each colour of Decision 2, the red one ringed. The
      console shows no errors or warnings.
@@ -199,8 +234,8 @@ hard-reload (Shift+Cmd+R).
      third of a second; the ring moves to the blue swatch.
 3. **Do:** click "Paper Dart" and let it finish, then click each swatch
    in turn.
-   - **Expect:** every red part of the dart takes each colour; every
-     off-white part stays off-white.
+   - **Expect:** every part of the dart showing its coloured side takes
+     each colour in turn; every off-white part stays off-white.
 4. **Do:** click "Flat", then "Paper Dart", and as soon as the fold
    lines have faded in, click through all the swatches while it folds.
    - **Expect:** each change starts at once and the folding never
@@ -211,7 +246,8 @@ hard-reload (Shift+Cmd+R).
      reached, with no flash of the first colour, of red or of white.
 6. **Do:** press Tab until a swatch has a visible focus ring, then
    press the right and left arrow keys, then Tab.
-   - **Expect:** focus lands on the chosen swatch; each arrow press
+   - **Expect:** focus lands on the chosen swatch, with a focus ring
+     distinct from its chosen ring; each arrow press
      moves the choice and the ring, and fades the paper; Tab leaves the
      group.
 7. **Do:** choose green, then reload with Cmd+R.
@@ -251,3 +287,55 @@ hard-reload (Shift+Cmd+R).
   agent's suggested values and proposals ("go with the defaults"): the
   five colours of Decision 2, a 0.3 s fade, radio inputs styled as
   plain squares, and the bar's renaming to `.controls`.
+- **2026-11-10T11:42:01Z** — **reviewed**: no Major findings; contrasts,
+  `Color.setHex()`/`lerpColors()` (r187), links and predecessor code
+  re-checked; Minor fixes applied unattended: `PAPER_COLORS` shape and
+  JSON, ring as `box-shadow` so the focus ring survives, swatch sizes
+  filled by the agent (1.5rem from WCAG 2.2 target size, 2px ring and
+  gap, open to tuning), `createPaper(frontColor, radiusMeters, sheet)`,
+  easing inside `setFrontColorFade()`, load order and initial fade
+  state, Manual QA 1, 3 and 6 wording.
+- **2026-11-10T11:46:14Z** — **implemented**: Steps 1 and 2, check-first
+  (every Agent QA line failed for the expected reason before the work);
+  added `docs/src/scene/paper-colors.js` and
+  `docs/src/ui/color-swatches.js`; changed `docs/src/scene/paper.js`,
+  `docs/src/main.js`, `docs/index.html` and `docs/styles/main.css`;
+  `Color` constructor, `setHex()`, `copy()`, `lerpColors()` and
+  `Timer.getDelta()` checked in r187 source; Step 1 Agent QA gives
+  `5 true`, `true 0.5000 true 1 false` and `0`; Step 2 Agent QA 1 to 4
+  give 5, 0, 0 and 1 or more per file; no `:focus-visible`
+  `outline-offset` added, pending Manual QA 6; Manual QA unchanged.
+- **2026-11-10T11:47:30Z** — **verified**: agent checks pass: 19
+  modules parse, no long lines beyond the favicon `data:` URL and the
+  canvas's existing `aria-label` in `docs/index.html`, `/` and all 19
+  modules and `styles/main.css` served with 200, vendored checksums
+  match; browser not run.
+- **2026-11-10T11:50:09Z** — **quality-checked**: Fixed: Step 1 had no
+  check for a zero or negative delta, so mutants dropping
+  `Math.max(deltaSeconds, 0)` or returning true always passed every
+  Agent QA line; added Step 1 bullet and Agent QA 4
+  (`false false 0.25`), which catches both (plan only); first-run
+  polish: `docs/styles/main.css` opening comment said
+  `paper-colors.js` paints the swatches, reworded to
+  `color-swatches.js`. Deferred: focus ring at `outline-offset` 0 may
+  merge with the `box-shadow` ring, chiefly in dark mode (judge at
+  Manual QA 6; candidate fix a `:focus-visible` `outline-offset` past
+  the ring, which needs a larger `--controls-gap`); yellow, green and
+  pink swatches below 3:1 against a white page (1.82, 2.79, 2.84; all
+  over 5:1 on Chrome's dark `#121212`), judge at Manual QA 8; in
+  forced-colours mode the swatch backgrounds and the `box-shadow` ring
+  are dropped, so the choice is not shown (accessibility waits, by
+  scope); `PAPER_COLOR_FADE_SECONDS` matches `FADE_OUT_SECONDS` by a
+  comment, not an import, kept so the module imports nothing. Verified
+  fine: per-frame path (`stepColorFade()`, `setFrontColorFade()`,
+  `lerpColors()`, `smoothstep()` allocate nothing); motion scales with
+  `timer.getDelta()`; no GPU resource added, disposal unchanged;
+  resize untouched; `Color` constructor, `set()`, `setHex()`, `copy()`,
+  `lerpColors()` and `Material.setValues()` checked in r187 source;
+  the swatch callback's use of `paper` before its declaration is safe,
+  as no module in the graph awaits, so no `change` task can run before
+  `main.js` finishes; mid-fade change copies the live colour; mutant of
+  the early return is equivalent; Step 1 and 2 Agent QA re-run and
+  pass; Manual QA 1 to 10 walked against the code, unchanged.
+- **2026-11-10T11:56:46Z** — **done**: manual QA passed (the Lead
+  Developer, all groups); moved to `plans/done/`.

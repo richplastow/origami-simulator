@@ -20,7 +20,7 @@ type: plan
   attribute in `docs/src/scene/paper.js` holds each vertex's sheet
   coordinates, and on [Plan 02b](../done/02b-paper-hat.md)'s stretch.
   It follows [Plan 03](../done/03-spin-the-paper.md) and
-  [Plan 04](04-paper-colours.md): its Manual QA spins the paper and
+  [Plan 04](../done/04-paper-colours.md): its Manual QA spins the paper and
   changes its colour.
 - Feeds [Plan 06](06-self-shadows.md).
 - Three.js APIs below were checked against the

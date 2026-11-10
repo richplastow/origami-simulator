@@ -1,7 +1,8 @@
 /**
  * @fileoverview
  * The paper sheet: a two-tone, flat-shaded mesh, posed along its design's
- * fold sequence, with its crease pattern printed on the front.
+ * fold sequence, with its crease pattern printed on the front, whose colour
+ * fades to another on request.
  */
 
 import {
@@ -9,6 +10,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
+  Color,
   DynamicDrawUsage,
   FrontSide,
   Group,
@@ -23,8 +25,7 @@ import { smoothstep } from "../fold/easing.js";
 import { writePaperPositions } from "../fold/pose.js";
 import { drawFoldLines } from "./fold-lines.js";
 
-const PAPER_BACK_COLOR = 0xf4f1ea; // off-white
-const PAPER_FRONT_COLOR = 0xd9342b; // origami red
+const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
 
 /** #### Creates the paper sheet, flat, from a cut sheet
  * - Each face has its own vertices and a fan of triangles; each bridging
@@ -39,17 +40,23 @@ const PAPER_FRONT_COLOR = 0xd9342b; // origami red
  *   its whole fold sequence.
  * - The meshes sit in an inner group, whose scale stretches the flat sheet
  *   between two designs' shapes, so `group` stays free to turn.
+ * - The front's colour fades from the one showing to another through two
+ *   scratch colours, mixed in Three.js's working colour space; the back's
+ *   never changes.
+ * @param frontColor The front's colour at creation, as a hex number in
+ *   sRGB.
  * @param radiusMeters The largest distance from the origin that the paper
  *   reaches over every design's fold sequence, from maxPaperRadius(), in
  *   metres.
  * @param sheet The sheet that cutSheet() returns.
  * @returns The `group` to add to the scene; `stretchScale`, the inner
- *   group's `scale`, for writeStretchScale(); setLinesVisibility(), which
- *   fades the fold lines; setSequencePosition(), which poses the paper
- *   along its fold sequence; and setSheet(), which swaps in another
- *   design's sheet.
+ *   group's `scale`, for writeStretchScale(); startFrontColorFade(), which
+ *   sets the front's next colour, and setFrontColorFade(), which fades the
+ *   front towards it; setLinesVisibility(), which fades the fold lines;
+ *   setSequencePosition(), which poses the paper along its fold sequence;
+ *   and setSheet(), which swaps in another design's sheet.
  */
-export const createPaper = (radiusMeters, sheet) => {
+export const createPaper = (frontColor, radiusMeters, sheet) => {
   let shown = createSheetGeometry(radiusMeters, sheet);
   const linesCanvas = document.createElement("canvas");
   drawFoldLines(linesCanvas, sheet);
@@ -61,8 +68,9 @@ export const createPaper = (radiusMeters, sheet) => {
   });
   const linesMesh = new Mesh(shown.geometry, linesMaterial);
   linesMesh.visible = false;
+  const frontMaterial = createPaperMaterial(frontColor, FrontSide);
   const meshes = [
-    new Mesh(shown.geometry, createPaperMaterial(PAPER_FRONT_COLOR, FrontSide)),
+    new Mesh(shown.geometry, frontMaterial),
     new Mesh(shown.geometry, createPaperMaterial(PAPER_BACK_COLOR, BackSide)),
     linesMesh,
   ];
@@ -70,6 +78,25 @@ export const createPaper = (radiusMeters, sheet) => {
   stretchGroup.add(...meshes);
   const group = new Group();
   group.add(stretchGroup);
+
+  // The front colour fade's start and end, created once and reused. Both
+  // start as the front's colour, so a fade before the first start changes
+  // nothing.
+  const fadeFromColor = new Color(frontColor);
+  const fadeToColor = new Color(frontColor);
+
+  /** #### Mixes the front's colour, eased, from the fade's start to its end
+   * - Allocates nothing, so it is safe on the per-frame path.
+   * @param progress From 0 (the start colour) to 1 (the end colour), linear
+   *   in time.
+   */
+  const setFrontColorFade = (progress) => {
+    frontMaterial.color.lerpColors(
+      fadeFromColor,
+      fadeToColor,
+      smoothstep(progress),
+    );
+  };
 
   /** #### Fades the fold lines, eased, hiding them altogether at 0
    * - Allocates nothing, so it is safe on the per-frame path.
@@ -112,11 +139,26 @@ export const createPaper = (radiusMeters, sheet) => {
     oldTexture.dispose();
   };
 
+  /** #### Starts the front's fade from the colour showing to another
+   * - The colour showing may be part-way through a fade, so a change
+   *   mid-fade heads for the new colour from wherever the last one reached.
+   * - Changes no colour itself: setFrontColorFade() then runs the fade from
+   *   0 to 1.
+   * - Allocates nothing.
+   * @param color The colour to fade to, as a hex number in sRGB.
+   */
+  const startFrontColorFade = (color) => {
+    fadeFromColor.copy(frontMaterial.color);
+    fadeToColor.setHex(color);
+  };
+
   return {
     group,
+    setFrontColorFade,
     setLinesVisibility,
     setSequencePosition,
     setSheet,
+    startFrontColorFade,
     stretchScale: stretchGroup.scale,
   };
 };
