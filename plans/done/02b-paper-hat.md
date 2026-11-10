@@ -16,15 +16,15 @@ type: plan
   (`docs/src/designs/sheet.js`) and the dart (`PAPER_DART`). This plan
   adds data and behaviour to each.
 - Implements the research in
-  [02-simple-folds-research.md](../todo/02-simple-folds-research.md), which serves
+  [02-simple-folds-research.md](02-simple-folds-research.md), which serves
   Plans 02a to 02c and stays in `plans/todo/` until the last of them is
-  done: its [Scope](../todo/02-simple-folds-research.md#scope),
-  [The paper hat](../todo/02-simple-folds-research.md#the-paper-hat),
-  [Stretchy paper](../todo/02-simple-folds-research.md#stretchy-paper) and
-  [Presentation](../todo/02-simple-folds-research.md#presentation). The design
+  done: its [Scope](02-simple-folds-research.md#scope),
+  [The paper hat](02-simple-folds-research.md#the-paper-hat),
+  [Stretchy paper](02-simple-folds-research.md#stretchy-paper) and
+  [Presentation](02-simple-folds-research.md#presentation). The design
   follows the
   [Utrecht University hat](https://webspace.science.uu.nl/~bodla101/d.origami/traditional/hat.html).
-- Feeds [Plan 02c](../todo/02c-printed-fold-lines.md), whose fades sit between
+- Feeds [Plan 02c](02c-printed-fold-lines.md), whose fades sit between
   the phases this plan adds.
 - Three.js APIs below were checked against the
   [r187 source](https://github.com/mrdoob/three.js/tree/r187/src) on
@@ -46,7 +46,7 @@ The terms of [Plan 02a](./02a-paper-dart.md#definitions) apply. Two more:
 1. **The hat's sheet**: `PAPER_HAT` in `docs/src/designs/paper-hat.js`,
    with `aspect` `Math.SQRT1_2`, A4's shape, so `sheetSize()` gives
    0.126134 × 0.178381 m (126.1 × 178.4 mm) at the square's area, per
-   [Scope](../todo/02-simple-folds-research.md#scope). The brim is 26.1 mm.
+   [Scope](02-simple-folds-research.md#scope). The brim is 26.1 mm.
 2. **The hat's folds**, in the shape of
    [Plan 02a's Decision 2](./02a-paper-dart.md#decisions), all to π with
    `turns: "moving-side"`, computed on 2026-11-10 from the research's
@@ -77,7 +77,7 @@ The terms of [Plan 02a](./02a-paper-dart.md#definitions) apply. Two more:
    of fold 1's crease, which folds 2 and 3 bring together on the centre
    line, edge-on to the camera.
 3. **The paper slides to stay centred**, per
-   [Presentation](../todo/02-simple-folds-research.md#presentation):
+   [Presentation](02-simple-folds-research.md#presentation):
    `cutSheet()` adds `centres` to the sheet, one per stage: the centre of
    that stage's bounding box in the folded plane, except that a fold with
    `turns: "both-sides"`, or one that stops short of π, keeps the centre
@@ -118,7 +118,7 @@ The terms of [Plan 02a](./02a-paper-dart.md#definitions) apply. Two more:
    once placed.
 5. **Stepper state**: the state gains the design the sheet is stretching
    from and the stretch's progress, from 0 to 1. The research's
-   [Stretchy paper](../todo/02-simple-folds-research.md#stretchy-paper) sketches
+   [Stretchy paper](02-simple-folds-research.md#stretchy-paper) sketches
    the sheet's width and height instead, but the two designs' aspects and
    the progress already give them, so storing them would duplicate.
 
@@ -142,13 +142,13 @@ The terms of [Plan 02a](./02a-paper-dart.md#definitions) apply. Two more:
    design, the stepper unfolds towards 0, whatever the target's
    `position`. The target is read only when
    a fold or the stretch has finished, per
-   [Scope](../todo/02-simple-folds-research.md#scope). A `null` target keeps the
+   [Scope](02-simple-folds-research.md#scope). A `null` target keeps the
    sheet showing ("Flat"). It returns true when `position`, `designId` or
    `stretchProgress` changed. Plan 02a's stepper checks need the new
    argument and fields to run again.
 6. **Stretch**: `STRETCH_SECONDS = 0.4` in `stepper.js`, eased with
    Plan 02a's smoothstep, per
-   [Stretchy paper](../todo/02-simple-folds-research.md#stretchy-paper).
+   [Stretchy paper](02-simple-folds-research.md#stretchy-paper).
    smoothstep() moves from `pose.js`, which keeps using it, to its own
    module, `docs/src/fold/easing.js`, as a named export: importing it into
    `sheet.js` from `pose.js` would close an import cycle, since `pose.js`
@@ -171,7 +171,7 @@ The terms of [Plan 02a](./02a-paper-dart.md#definitions) apply. Two more:
 8. **Buttons**: "Paper Hat" (`data-fold="paper-hat"`) after "Paper Dart",
    targeting `PAPER_HAT.folds.length`. "Flat" unfolds whichever design
    shows and keeps its sheet, per
-   [Stretchy paper](../todo/02-simple-folds-research.md#stretchy-paper).
+   [Stretchy paper](02-simple-folds-research.md#stretchy-paper).
 9. **Performance**: a switch rebuilds one small geometry (26 vertices for
    the hat) at rest; the per-frame path adds one scale write. Manual QA 10
    records frame times over a switch, the first baseline, since Plan 02a
@@ -243,7 +243,7 @@ The terms of [Plan 02a](./02a-paper-dart.md#definitions) apply. Two more:
 - It should let a press during a stretch take effect when it finishes
   (Agent QA 3).
 - It should skip the stretch between two designs of the same shape, per
-  [Stretchy paper](../todo/02-simple-folds-research.md#stretchy-paper)
+  [Stretchy paper](02-simple-folds-research.md#stretchy-paper)
   (Agent QA 4).
 - It should ease the sheet's scale from the old shape to the new,
   allocating nothing (Agent QA 5).

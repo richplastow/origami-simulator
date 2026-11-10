@@ -32,14 +32,19 @@ const TOLERANCE_METERS = 1e-9;
  * - Each bridge is a quad of vertex indices, `[a0, a1, b0, b1]`, joining
  *   an edge that two faces share, where `a0` and `b0` are the same sheet
  *   point. Vertices are counted face by face, around each polygon.
+ * - Each crease line is where a fold's line crosses one face it splits,
+ *   in sheet coordinates: `from` and `to`, `[x, y]` in metres, in no set
+ *   order, and `type`, as seen from the sheet's front: the fold's type,
+ *   or the opposite when the face lies face down before the fold. Lines
+ *   are not merged, so a fold through several layers gives several.
  * - Throws, naming the design, when a fold moves nothing, when a fold that
  *   stops short of 180° is followed by a fold that moves its faces, and
  *   when the final faces leave a T-junction.
  * - Pure maths, with no DOM or GPU access.
  * @param design The design: `aspect`, `folds` and `id`.
  * @returns The sheet: `bridges`, `centres`, one per stage from 0 (flat) to
- *   the fold count, `designId`, `faces`, `folds`, `heightMeters` and
- *   `widthMeters`.
+ *   the fold count, `creaseLines`, `designId`, `faces`, `folds`,
+ *   `heightMeters` and `widthMeters`.
  */
 export const cutSheet = (design) => {
   const { folds, id } = design;
@@ -60,8 +65,11 @@ export const cutSheet = (design) => {
       ranks: [0],
     },
   ];
+  const creaseLines = [];
   folds.forEach((fold, foldIndex) => {
-    faces = applyFold(faces, foldIndex, design);
+    const result = applyFold(faces, foldIndex, design);
+    faces = result.faces;
+    creaseLines.push(...result.creaseLines);
   });
 
   const layers = stackLayers(faces, folds.length);
@@ -72,6 +80,7 @@ export const cutSheet = (design) => {
   return {
     bridges: findBridges(faces),
     centres: stageCentres(faces, folds),
+    creaseLines,
     designId: id,
     faces: faces.map(({ movedBy, placements, polygon }, i) => ({
       layers: layers[i],
@@ -93,10 +102,12 @@ export const stopsShort = (fold) => fold.targetRadians < Math.PI;
 
 /** #### Runs one fold over the faces, returning the faces it leaves
  * - Every face gains one placement and one rank, for the stage after it.
+ * - Every face the fold splits gives one crease line, typed as seen from
+ *   the sheet's front.
  * @param faces The faces before the fold, each with `ranks`.
  * @param foldIndex The fold's index in the design's `folds`.
  * @param design The design, for its folds and its `id`.
- * @returns The faces after the fold.
+ * @returns The `faces` after the fold, and the `creaseLines` it makes.
  */
 const applyFold = (faces, foldIndex, design) => {
   const fold = design.folds[foldIndex];
@@ -110,6 +121,7 @@ const applyFold = (faces, foldIndex, design) => {
   const b = 2 * ux * uy;
   const reflection = [a, b, b, -a, px - a * px - b * py, py - b * px + a * py];
 
+  const creaseLines = [];
   const held = [];
   const moving = [];
   for (const face of faces) {
@@ -128,6 +140,19 @@ const applyFold = (faces, foldIndex, design) => {
     const right = clipPolygon(face.polygon, sides, -1);
     if (left !== null) moving.push({ ...face, polygon: left });
     if (right !== null) held.push({ ...face, polygon: right });
+
+    // A face turned over by its placement, whose determinant is then
+    // negative, shows the fold reversed.
+    if (left !== null && right !== null) {
+      const [from, to] = crossingSegment(face.polygon, sides);
+      const isFaceDown =
+        placement[0] * placement[3] - placement[1] * placement[2] < 0;
+      creaseLines.push({
+        from,
+        to,
+        type: isFaceDown ? oppositeType(fold.type) : fold.type,
+      });
+    }
   }
 
   if (moving.length === 0) {
@@ -152,7 +177,7 @@ const applyFold = (faces, foldIndex, design) => {
       ? Math.max(...allRanks) + 1 + Math.max(...movingRanks)
       : Math.min(...allRanks) - 1 + Math.min(...movingRanks);
 
-  return [
+  const nextFaces = [
     ...held.map((face) => ({
       ...face,
       placements: [...face.placements, face.placements.at(-1)],
@@ -168,6 +193,8 @@ const applyFold = (faces, foldIndex, design) => {
       ranks: [...face.ranks, rankSum - face.ranks.at(-1)],
     })),
   ];
+
+  return { creaseLines, faces: nextFaces };
 };
 
 /** #### Splits a convex polygon by a line, keeping one side
@@ -188,12 +215,7 @@ const clipPolygon = (polygon, sides, keep) => {
       (s > TOLERANCE_METERS && t < -TOLERANCE_METERS) ||
       (s < -TOLERANCE_METERS && t > TOLERANCE_METERS)
     ) {
-      const k = s / (s - t);
-      const next = polygon[j];
-      piece.push([
-        point[0] + k * (next[0] - point[0]),
-        point[1] + k * (next[1] - point[1]),
-      ]);
+      piece.push(pointBetween(point, polygon[j], s, t));
     }
   });
 
@@ -216,6 +238,31 @@ const compose = (outer, inner) => [
   outer[0] * inner[4] + outer[2] * inner[5] + outer[4],
   outer[1] * inner[4] + outer[3] * inner[5] + outer[5],
 ];
+
+/** #### Finds where a line crosses a convex polygon it splits
+ * - Takes the corners on the line and the points where edges cross it, as
+ *   clipPolygon() finds them.
+ * @param polygon The polygon's corners, `[x, y]`.
+ * @param sides Each corner's signed distance from the line, in metres.
+ * @returns The crossing's two ends, `[x, y]`.
+ */
+const crossingSegment = (polygon, sides) => {
+  const ends = [];
+  polygon.forEach((point, i) => {
+    const j = (i + 1) % polygon.length;
+    const s = sides[i];
+    const t = sides[j];
+    if (Math.abs(s) <= TOLERANCE_METERS) ends.push(point);
+    if (
+      (s > TOLERANCE_METERS && t < -TOLERANCE_METERS) ||
+      (s < -TOLERANCE_METERS && t > TOLERANCE_METERS)
+    ) {
+      ends.push(pointBetween(point, polygon[j], s, t));
+    }
+  });
+
+  return ends;
+};
 
 /** #### Finds every edge two faces share, as a bridging strip
  * @param faces The final faces.
@@ -291,6 +338,12 @@ const liesInsideEdge = (point, start, end) => {
   return Math.abs(across) < TOLERANCE_METERS && along > 0 && along < length;
 };
 
+/** #### Returns the other fold type
+ * @param type `"mountain"` or `"valley"`.
+ * @returns `"valley"` for `"mountain"`, and `"mountain"` for `"valley"`.
+ */
+const oppositeType = (type) => (type === "valley" ? "mountain" : "valley");
+
 /** #### Returns true if two convex polygons overlap by more than a sliver
  * - Clips the first by each edge of the second in turn.
  * @param first The first polygon, anticlockwise.
@@ -321,6 +374,22 @@ const place = ([a, b, c, d, tx, ty], [x, y]) => [
   a * x + c * y + tx,
   b * x + d * y + ty,
 ];
+
+/** #### Finds where an edge crosses a line, from its ends' distances
+ * @param point The edge's start, `[x, y]`.
+ * @param next The edge's end, `[x, y]`.
+ * @param s The start's signed distance from the line, in metres.
+ * @param t The end's signed distance from the line, in metres.
+ * @returns The crossing, `[x, y]`.
+ */
+const pointBetween = (point, next, s, t) => {
+  const k = s / (s - t);
+
+  return [
+    point[0] + k * (next[0] - point[0]),
+    point[1] + k * (next[1] - point[1]),
+  ];
+};
 
 /** #### Returns true if two points are one
  * @param first The first point, `[x, y]`.

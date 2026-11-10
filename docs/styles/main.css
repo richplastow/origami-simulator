@@ -8,6 +8,7 @@
 :root {
   --fold-buttons-gap: 0.5rem; /* between neighbouring buttons */
   --fold-buttons-offset: 1.5rem; /* from the viewport's bottom edge */
+  --fold-lines-gap: 0.25rem; /* between the checkbox and its text */
 
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
@@ -41,4 +42,11 @@ h1 {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--fold-buttons-gap);
+}
+
+/* The fold-lines checkbox sits beside the buttons, centred on their line. */
+.fold-buttons label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fold-lines-gap);
 }

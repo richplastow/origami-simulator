@@ -1,22 +1,27 @@
 /**
  * @fileoverview
  * The paper sheet: a two-tone, flat-shaded mesh, posed along its design's
- * fold sequence.
+ * fold sequence, with its crease pattern printed on the front.
  */
 
 import {
   BackSide,
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   DynamicDrawUsage,
   FrontSide,
   Group,
   Mesh,
+  MeshBasicMaterial,
   MeshLambertMaterial,
+  SRGBColorSpace,
   Sphere,
   Vector3,
 } from "three";
+import { smoothstep } from "../fold/easing.js";
 import { writePaperPositions } from "../fold/pose.js";
+import { drawFoldLines } from "./fold-lines.js";
 
 const PAPER_BACK_COLOR = 0xf4f1ea; // off-white
 const PAPER_FRONT_COLOR = 0xd9342b; // origami red
@@ -24,8 +29,12 @@ const PAPER_FRONT_COLOR = 0xd9342b; // origami red
 /** #### Creates the paper sheet, flat, from a cut sheet
  * - Each face has its own vertices and a fan of triangles; each bridging
  *   strip is two triangles joining the edges of two faces at a crease.
- * - The front and back meshes share one geometry, whose positions are
- *   rewritten in place as the paper folds.
+ * - The front, back and fold-line meshes share one geometry, whose
+ *   positions are rewritten in place as the paper folds.
+ * - The fold-line mesh shows the sheet's crease pattern, drawn into a
+ *   canvas, on the front only, through UVs that follow sheet coordinates.
+ *   Unlit and transparent, it draws over the front mesh, whose depth it
+ *   matches. It starts hidden, so its texture uploads only once shown.
  * - The bounding sphere is set once per geometry, to hold the paper over
  *   its whole fold sequence.
  * - The meshes sit in an inner group, whose scale stretches the flat sheet
@@ -35,20 +44,41 @@ const PAPER_FRONT_COLOR = 0xd9342b; // origami red
  *   metres.
  * @param sheet The sheet that cutSheet() returns.
  * @returns The `group` to add to the scene; `stretchScale`, the inner
- *   group's `scale`, for writeStretchScale(); setSequencePosition(), which
- *   poses the paper along its fold sequence; and setSheet(), which swaps
- *   in another design's sheet.
+ *   group's `scale`, for writeStretchScale(); setLinesVisibility(), which
+ *   fades the fold lines; setSequencePosition(), which poses the paper
+ *   along its fold sequence; and setSheet(), which swaps in another
+ *   design's sheet.
  */
 export const createPaper = (radiusMeters, sheet) => {
   let shown = createSheetGeometry(radiusMeters, sheet);
+  const linesCanvas = document.createElement("canvas");
+  drawFoldLines(linesCanvas, sheet);
+  const linesMaterial = new MeshBasicMaterial({
+    map: createLinesTexture(linesCanvas),
+    opacity: 0,
+    side: FrontSide,
+    transparent: true,
+  });
+  const linesMesh = new Mesh(shown.geometry, linesMaterial);
+  linesMesh.visible = false;
   const meshes = [
     new Mesh(shown.geometry, createPaperMaterial(PAPER_FRONT_COLOR, FrontSide)),
     new Mesh(shown.geometry, createPaperMaterial(PAPER_BACK_COLOR, BackSide)),
+    linesMesh,
   ];
   const stretchGroup = new Group();
   stretchGroup.add(...meshes);
   const group = new Group();
   group.add(stretchGroup);
+
+  /** #### Fades the fold lines, eased, hiding them altogether at 0
+   * - Allocates nothing, so it is safe on the per-frame path.
+   * @param visibility From 0 (hidden) to 1 (shown), linear in time.
+   */
+  const setLinesVisibility = (visibility) => {
+    linesMaterial.opacity = smoothstep(visibility);
+    linesMesh.visible = linesMaterial.opacity > 0;
+  };
 
   /** #### Poses the paper at a point in its fold sequence
    * - Allocates nothing, so it is safe on the per-frame path.
@@ -60,9 +90,14 @@ export const createPaper = (radiusMeters, sheet) => {
   };
 
   /** #### Swaps in another design's sheet, posed flat
-   * - Gives both meshes the new geometry, then disposes of the old one,
+   * - Gives every mesh the new geometry, then disposes of the old one,
    *   which frees its attributes on the GPU; the materials stay.
-   * - Allocates, so call it only when the design changes, at rest.
+   * - Redraws the fold lines' canvas for the new sheet, gives the material
+   *   a new texture of it, and disposes of the old texture: a texture's
+   *   storage is allocated on its first upload, so it cannot take a
+   *   canvas of another size.
+   * - Allocates, so call it only when the design changes, at rest, with
+   *   the fold lines hidden.
    * @param nextSheet The sheet that cutSheet() returns for the new design.
    */
   const setSheet = (nextSheet) => {
@@ -70,14 +105,32 @@ export const createPaper = (radiusMeters, sheet) => {
     shown = createSheetGeometry(radiusMeters, nextSheet);
     for (const mesh of meshes) mesh.geometry = shown.geometry;
     oldGeometry.dispose();
+
+    const oldTexture = linesMaterial.map;
+    drawFoldLines(linesCanvas, nextSheet);
+    linesMaterial.map = createLinesTexture(linesCanvas);
+    oldTexture.dispose();
   };
 
   return {
     group,
+    setLinesVisibility,
     setSequencePosition,
     setSheet,
     stretchScale: stretchGroup.scale,
   };
+};
+
+/** #### Creates a colour texture of a canvas holding fold lines
+ * - CanvasTexture's constructor takes no colour space, so it is set after.
+ * @param canvas The canvas, already drawn.
+ * @returns The texture.
+ */
+const createLinesTexture = (canvas) => {
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+
+  return texture;
 };
 
 /** #### Creates a matte, flat-shaded material for one side of the paper
@@ -93,6 +146,9 @@ const createPaperMaterial = (color, side) =>
 /** #### Creates the geometry of a cut sheet, posed flat
  * - Its bounding sphere, at the origin, holds every design's fold sequence,
  *   so it is never recomputed.
+ * - Its `uv` attribute holds each vertex's sheet coordinates scaled to 0
+ *   to 1, `u = x / width + 0.5` and `v = y / height + 0.5`, so a bridging
+ *   strip, which reuses its faces' vertices, carries its crease's UVs.
  * @param radiusMeters The bounding sphere's radius, in metres.
  * @param sheet The sheet that cutSheet() returns.
  * @returns The `geometry`, its `positionAttribute` and the `positions`
@@ -113,9 +169,20 @@ const createSheetGeometry = (radiusMeters, sheet) => {
   const normals = new Float32Array(3 * vertexCount);
   for (let i = 0; i < vertexCount; i++) normals[3 * i + 2] = 1;
 
+  const uvs = new Float32Array(2 * vertexCount);
+  let vertex = 0;
+  for (const { polygon } of sheet.faces) {
+    for (const [x, y] of polygon) {
+      uvs[2 * vertex] = x / sheet.widthMeters + 0.5;
+      uvs[2 * vertex + 1] = y / sheet.heightMeters + 0.5;
+      vertex++;
+    }
+  }
+
   const geometry = new BufferGeometry()
     .setAttribute("position", positionAttribute)
     .setAttribute("normal", new BufferAttribute(normals, 3))
+    .setAttribute("uv", new BufferAttribute(uvs, 2))
     .setIndex(createTriangleIndices(sheet));
   geometry.boundingSphere = new Sphere(new Vector3(), radiusMeters);
 

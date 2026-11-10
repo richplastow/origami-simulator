@@ -7,7 +7,7 @@ type: research
 ## Context
 
 - Supports the plans that follow
-  [Plan 01](../done/01-fold-sheet-in-half.md), not yet drafted: several
+  [Plan 01](01-fold-sheet-in-half.md), not yet drafted: several
   folds made one after another, two classic designs, eased motion, paper
   with thickness, sheets that change shape between designs, and printed
   fold lines.
@@ -116,7 +116,7 @@ Settled on 2026-11-09 and 2026-11-10.
   half in front of the right. The prototype folded it as a mountain,
   which left the dart seen from below, against [Scope](#scope); a valley
   was ruled on 2026-11-10, and
-  [Plan 02a's Decision 2](../done/02a-paper-dart.md#decisions) holds the fold
+  [Plan 02a's Decision 2](02a-paper-dart.md#decisions) holds the fold
   list as built. Folds 6 and 7 are the wings: the same line, folded
   opposite ways by the two halves, the front half first.
 - Prototype results, the same for a 150 mm square and for A4:

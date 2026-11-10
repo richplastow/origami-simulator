@@ -15,16 +15,16 @@ type: plan
   fold model cannot make a sequence of folds. Replaces its crease pattern,
   kinematics and animation modules.
 - Implements the research in
-  [02-simple-folds-research.md](../todo/02-simple-folds-research.md), which serves
+  [02-simple-folds-research.md](02-simple-folds-research.md), which serves
   Plans 02a to 02c and stays in `plans/todo/` until the last of them is
-  done. Its [Scope](../todo/02-simple-folds-research.md#scope) holds the rulings
+  done. Its [Scope](02-simple-folds-research.md#scope) holds the rulings
   this plan follows;
-  [The paper dart](../todo/02-simple-folds-research.md#the-paper-dart),
-  [Cutting the sheet from a fold list](../todo/02-simple-folds-research.md#cutting-the-sheet-from-a-fold-list),
-  [Layer thickness](../todo/02-simple-folds-research.md#layer-thickness) and
-  [Animation](../todo/02-simple-folds-research.md#animation) hold the evidence.
+  [The paper dart](02-simple-folds-research.md#the-paper-dart),
+  [Cutting the sheet from a fold list](02-simple-folds-research.md#cutting-the-sheet-from-a-fold-list),
+  [Layer thickness](02-simple-folds-research.md#layer-thickness) and
+  [Animation](02-simple-folds-research.md#animation) hold the evidence.
 - Feeds [Plan 02b](./02b-paper-hat.md), the paper hat and switching between
-  designs, then [Plan 02c](../todo/02c-printed-fold-lines.md), printed fold lines.
+  designs, then [Plan 02c](02c-printed-fold-lines.md), printed fold lines.
 - Three.js APIs below were checked against the
   [r187 source](https://github.com/mrdoob/three.js/tree/r187/src) on
   2026-11-10, the release vendored per [CLAUDE.md](../../CLAUDE.md#threejs).
@@ -131,10 +131,10 @@ type: plan
    | 7    | (0, 75) → (29.837, -75)   | mountain | `{ heldBy: 4 }`  |
 
    Folds 1 to 5 finish at π; folds 6 and 7, the wings, at π/2, per
-   [Layer thickness](../todo/02-simple-folds-research.md#layer-thickness). Fold 5
+   [Layer thickness](02-simple-folds-research.md#layer-thickness). Fold 5
    is a valley, so the two halves turn towards the camera and the dart
    ends seen from above, as
-   [Scope](../todo/02-simple-folds-research.md#scope) rules: the spine, the keel,
+   [Scope](02-simple-folds-research.md#scope) rules: the spine, the keel,
    stays behind, and the wings open in front of it. The half that fold 5
    moved lies on top, so its wing, the near one, folds first (fold 6), and
    no later fold moves its faces, as Decision 6 requires. The research's
@@ -149,7 +149,7 @@ type: plan
    dart and, in Plan 02b, the hat.
 4. **Cutting the sheet**: `cutSheet(design)` in `docs/src/fold/engine.js`
    runs every fold once, at load, as
-   [Cutting the sheet from a fold list](../todo/02-simple-folds-research.md#cutting-the-sheet-from-a-fold-list)
+   [Cutting the sheet from a fold list](02-simple-folds-research.md#cutting-the-sheet-from-a-fold-list)
    sets out, and returns the sheet: its size, its folds, its final faces
    and its bridging strips. Nothing is cut while the paper moves. Each
    face holds its polygon (sheet coordinates, anticlockwise from the
@@ -187,7 +187,7 @@ type: plan
    layer above the highest face it overlaps, testing overlap by clipping
    one convex polygon with the other. Stacking by rank alone left the
    dart's flaps floating across 26 levels instead of 16
-   ([research](../todo/02-simple-folds-research.md#cutting-the-sheet-from-a-fold-list)).
+   ([research](02-simple-folds-research.md#cutting-the-sheet-from-a-fold-list)).
 6. **Designs the engine refuses**: `cutSheet()` throws, naming the design,
    when a fold moves nothing (`Fold 2 of design "x" moves nothing`), when a
    fold that stops short of π is followed by a fold that moves its faces
@@ -207,10 +207,10 @@ type: plan
    2026-11-10). Accepted by the Lead Developer for now; Manual QA 3
    watches for it.
 8. **Paper thickness**: `PAPER_THICKNESS_METERS = 0.0001` (0.1 mm), per
-   [Scope](../todo/02-simple-folds-research.md#scope), tuned by eye at Manual QA.
+   [Scope](02-simple-folds-research.md#scope), tuned by eye at Manual QA.
    A face at layer `L` sits `(L − 1) × t` above the back of the stack.
 9. **Pose** (derived in
-   [Layer thickness](../todo/02-simple-folds-research.md#layer-thickness), not yet
+   [Layer thickness](02-simple-folds-research.md#layer-thickness), not yet
    seen in a browser): `writePaperPositions(positions, sequencePosition,
    sheet)` in `docs/src/fold/pose.js` writes every vertex, face by face.
    - During fold `k`, with eased progress `e` and angle `θ = e × target`,
@@ -260,14 +260,14 @@ type: plan
     `docs/src/fold/stepper.js` moves the position linearly in time; the
     pose eases it. It reads the target only at a whole position, so a
     press mid-fold takes effect when that fold finishes, per
-    [Animation](../todo/02-simple-folds-research.md#animation). Time left over at
+    [Animation](02-simple-folds-research.md#animation). Time left over at
     a whole position carries into the next fold in the same step, so the
     total time does not depend on the frame rate. A negative delta counts
     as zero, as Plan 01's Timer note requires. It returns true when
     `position` changed, and allocates nothing. It reads and changes no
     `designId`: Plan 02b adds the switch between designs.
 12. **Timings**: `FOLD_SECONDS = 0.7` per fold; `UNFOLD_SECONDS = 0.35`,
-    twice as fast, per [Scope](../todo/02-simple-folds-research.md#scope). The
+    twice as fast, per [Scope](02-simple-folds-research.md#scope). The
     dart folds in 4.9 s and unfolds in 2.45 s.
 13. **Camera**: framed by the largest distance from the origin that any
     vertex reaches over the design's whole sequence,
