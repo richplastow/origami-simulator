@@ -1,15 +1,15 @@
 {
   "name": "pureland-simulator",
-  "version": "0.0.1",
-  "description": "Create classic origami animals in a virtual world",
-  "homepage": "https://richplastow.com/origami-simulator/",
-  "bugs": "https://github.com/richplastow/origami-simulator/issues",
+  "version": "1.0.0",
+  "description": "Discover 'pureland' origami designs, animating in 3D!",
+  "homepage": "https://richplastow.com/pureland-simulator/",
+  "bugs": "https://github.com/richplastow/pureland-simulator/issues",
   "license": "MIT",
   "author": "Rich Plastow",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/richplastow/origami-simulator.git"
+    "url": "git+https://github.com/richplastow/pureland-simulator.git"
   },
-  "private": true,
+  "private": false,
   "type": "module"
 }

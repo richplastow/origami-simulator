@@ -210,7 +210,7 @@ hard-reload (Shift+Cmd+R).
 
 9. **Do:** in the Performance panel, record the dart folding while
    dragging. Then open the live site,
-   `https://richplastow.com/origami-simulator/`, which shows the
+   `https://richplastow.com/pureland-simulator/`, which shows the
    previous plan's work until this is pushed, and record the same
    there.
    - **Expect:** steady frames on both. Note the frame times, for

@@ -322,7 +322,7 @@ hard-reload (Shift+Cmd+R).
    - **Why:** a texture not disposed at each switch leaks about 22 MB of
      GPU memory.
 9. **Do:** in the Performance panel, record step 5 with the lines on.
-   Then open the live site, `https://richplastow.com/origami-simulator/`,
+   Then open the live site, `https://richplastow.com/pureland-simulator/`,
    which shows Plan 02b, without lines, until this work is pushed, and
    record the same switch there.
    - **Expect:** steady frames; any long task sits while the sheet is

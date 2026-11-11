@@ -1,12 +1,12 @@
 # Pureland Simulator
 
-Create classic origami animals in a virtual world
+Discover 'pureland' origami designs, animating in 3D!
 
-- version: 0.0.1
+- version: 1.0.0
 - license: MIT
 - author: Rich Plastow
-- repository: <https://github.com/richplastow/origami-simulator>
-- homepage: <https://richplastow.com/origami-simulator/>
+- repository: <https://github.com/richplastow/pureland-simulator>
+- homepage: <https://richplastow.com/pureland-simulator/>
 
 ## Usage
 
@@ -17,4 +17,4 @@ open http://localhost:1111
 npx serve docs -p 1111
 ```
 
-Use `ctrl+C` to stop the server.
+Use `ctrl+c` to stop the server.

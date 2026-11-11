@@ -46,7 +46,7 @@ type: plan
    README's heading, and `"name": "pureland-simulator"` in
    `package.json`. Nothing else in `package.json` changes: `homepage`,
    `bugs`, `repository`, and the README's two links keep their
-   `origami-simulator` URLs until the GitHub repository itself is
+   `pureland-simulator` URLs until the GitHub repository itself is
    renamed, which is outside this plan. The page has no heading at all:
    the `<h1>` and its CSS rule go.
 2. **A design leans as a whole, by a new optional `leanRadians`.** The
