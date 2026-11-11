@@ -1,6 +1,10 @@
+import { HEART } from "./heart.js";
+import { HOUSE } from "./house.js";
 import { ICE_CREAM } from "./ice-cream.js";
+import { MOUNT_FUJI } from "./mount-fuji.js";
 import { PAPER_DART } from "./paper-dart.js";
 import { PAPER_HAT } from "./paper-hat.js";
+import { PENCIL } from "./pencil.js";
 import { WATERMELON } from "./watermelon.js";
 import { YACHT } from "./yacht.js";
 
@@ -16,4 +20,8 @@ export const DESIGNS = Object.freeze([
   WATERMELON,
   YACHT,
   ICE_CREAM,
+  MOUNT_FUJI,
+  HOUSE,
+  PENCIL,
+  HEART,
 ]);

@@ -11,14 +11,14 @@ type: plan
   a pencil and a heart from a half square, the first 1:2 sheets in the
   app. It changes no engine, pose or scene code.
 - Takes designs 8, 16, 21 and 22 from the shortlist in
-  [07-design-research.md](./07-design-research.md#the-shortlist), under
-  its [Ruling 4](./07-design-research.md#ruling-4-every-sheet-keeps-the-same-area-so-14-strips-wait),
+  [07-design-research.md](../todo/07-design-research.md#the-shortlist), under
+  its [Ruling 4](../todo/07-design-research.md#ruling-4-every-sheet-keeps-the-same-area-so-14-strips-wait),
   which admits 1:2 sheets, and its
-  [Ruling 5](./07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end),
+  [Ruling 5](../todo/07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end),
   one button per design.
-- Depends on [Plan 09](../done/09-turn-the-paper-over.md): `steps`, the
+- Depends on [Plan 09](./09-turn-the-paper-over.md): `steps`, the
   turn-over, the view frame, createFold() and `DESIGNS`. Depends on
-  [Plan 10](../done/10-start-the-sheet-turned.md): `start`, which three of
+  [Plan 10](./10-start-the-sheet-turned.md): `start`, which three of
   the four need to begin white side up. The remaining designs follow in
   later plans.
 - The sources, read on 2026-11-10, step photos and diagram included:
@@ -31,13 +31,16 @@ type: plan
     for its photos of the finished pencil only: its steps are in a
     video, which was not watched
 - Figures marked "prototype" were run on 2026-11-10 in a throwaway Node
-  script, kept outside the repo, which built each design with
-  createFold() and `TURN_OVER` and cut it with the engine as Plan 10
-  leaves it. In all four, no face is under 87 mm², no two overlapping
-  faces share a layer at any stage, and, at 59 positions in each step,
-  no edge passes through another face further than 0.06 mm from that
-  face's own edge, the dart's figure by the same test. The real files
-  are written afresh, to [CLAUDE.md](../../CLAUDE.md)'s standards.
+  script, kept outside the repo, which built each design from its
+  constants with sheetSize(), createFold() and `TURN_OVER` and cut it
+  with the engine as committed with Plan 10. In all four, no face is
+  under 87 mm², no two overlapping faces share a layer at any stage,
+  overlapping faces that lie parallel are always at least one paper
+  thickness (0.1 mm) apart, and, at 400 positions in each step, no edge
+  passes more than 0.09 mm inside another face, the dart's figure by
+  the same test: a crossing within one paper thickness of a crease.
+  The real files are written afresh, to [CLAUDE.md](../../CLAUDE.md)'s
+  standards.
 
 ## Decisions
 
@@ -185,8 +188,8 @@ type: plan
 6. **The heart**, design 21, from a half square on its side, 212.13 mm
    by 106.07 mm, white side up: `aspect` is 2 and `start` is
    `{ "rollRadians": 0, "side": "back" }`.
-   - The bottom strip is a quarter of the sheet's height, 26.52 mm:
-     the source folds "about 19 mm" of its 75 mm.
+   - `STRIP_FRACTION = 1 / 4`: the bottom strip's share of the sheet's
+     height, 26.52 mm. The source folds "about 19 mm" of its 75 mm.
    - `LOBE_FLAT_FRACTION = 1 / 2`: each lobe's peak folds down half
      its height, read off the source's photo. Open to retuning at
      Manual QA 11.
@@ -210,10 +213,15 @@ type: plan
    - Step 0 folds the strip up. Steps 1 and 2 fold each half of the
      bottom edge up to the centre line, right then left, as two flaps
      that stand 26.52 mm above the top edge. After the turn-over,
-     steps 4 and 5 fold each side in to the strip's edge. Steps 6 to 9
-     fold the four top corners down, from right to left, leaving two
-     peaks. Steps 10 and 11 fold each peak's tip down, right then
-     left.
+     steps 4 and 5 fold each side in, right then left, along an
+     upright line a quarter of the sheet's width from the middle.
+     Steps 6 to 9 fold the four top corners down, from right to left,
+     each along the line from its lobe's peak, at the flaps' top edge
+     midway across the lobe, to the sheet's top edge at the lobe's
+     side, leaving two peaks. Steps 10 and 11 fold each peak's tip
+     down, right then left, along the level line
+     `LOBE_FLAT_FRACTION` of the way down from the peak to the sheet's
+     top edge.
    - Steps 7, 8, 10 and 11 move only the layers of one flap: the one
      that step 2 moved is on the right once the paper has turned over.
      Each of their lines, carried on, crosses the other lobe; steps 7
@@ -241,11 +249,14 @@ type: plan
    credits its source; the pencil's says that its sequence is this
    app's own, after the look of the pencil at Red Ted Art, which
    credits Mari Ono's _Origami for Children_.
-9. **The camera steps back by 2.2%.** It frames the furthest any
-   design reaches (`paperRadiusMeters` in `docs/src/main.js`): the
-   hat's 116.21 mm until now, the heart's 118.88 mm with this plan. A
-   flat 1:2 sheet alone reaches 118.59 mm. Every design draws 2.2%
-   smaller, which Ruling 4 accepts.
+9. **The camera steps back by 2.3%.** It frames the furthest any
+   design reaches: the hat's 116.21 mm until now, the heart's
+   118.88 mm with this plan. A flat 1:2 sheet alone reaches 118.59 mm.
+   Every design draws 2.2% smaller, which Ruling 4 accepts.
+   `paperRadiusMeters` in `docs/src/main.js` is already the largest
+   maxPaperRadius() over every sheet cut from `DESIGNS`, and sets both
+   the camera's distance and the shadow camera's bounds, so
+   `main.js` does not change.
 10. **Fold lines on a 1:2 sheet are coarser.** drawFoldLines() gives
     the sheet's longer side 2,048 px, so a 1:2 sheet has 9.7 px to the
     millimetre against the square's 13.7 and the hat's 11.5. Judged by
@@ -264,6 +275,8 @@ type: plan
   (Decisions 3, 4, 7).
 - It should cut Mount Fuji into the prototype's sheet (Agent QA 1).
 - It should cut the house into the prototype's sheet (Agent QA 1).
+- It should place each fold line and fold type where Decisions 3 and 4
+  put them (Agent QA 2).
 
 **Agent QA**
 
@@ -272,7 +285,13 @@ type: plan
    `house 5 5 14 6 7 0.10672 true -18.75` (steps, folds, faces, valley
    lines, mountain lines, reach in metres, centred left to right, last
    centre's height in mm; prototype)
-2. Do: `node --check docs/src/designs/mount-fuji.js && node --check docs/src/designs/house.js`
+2. Do: `node --input-type=module -e 'import { HOUSE } from "./docs/src/designs/house.js"; import { MOUNT_FUJI } from "./docs/src/designs/mount-fuji.js"; for (const design of [MOUNT_FUJI, HOUSE]) console.log(design.id, design.steps.map((step) => (step.kind === "fold" ? [...step.from, ...step.to].map((v) => (v * 1000).toFixed(2)).join() + step.type[0] : "t")).join(" "));'`
+   Expect: `mount-fuji -75.00,56.25,75.00,56.25v t 75.00,-9.38,-75.00,-9.38v 9.38,56.25,75.00,-9.38v -75.00,-9.38,-9.38,56.25v t`,
+   then `house -75.00,37.50,75.00,37.50v 37.50,37.50,37.50,-75.00m -37.50,-75.00,-37.50,37.50m 0.00,37.50,37.50,0.00m -37.50,0.00,0.00,37.50m`
+   (per step, a fold's `from` and `to` in mm then `v` for valley or `m`
+   for mountain, or `t` for a turn-over: Decision 3's JSON and Decision
+   4's table)
+3. Do: `node --check docs/src/designs/mount-fuji.js && node --check docs/src/designs/house.js`
    Expect: prints nothing.
 
 ### Step 2: The pencil and the heart [P]
@@ -282,6 +301,8 @@ type: plan
 - It should cut the pencil into the prototype's sheet (Agent QA 1).
 - It should cut the heart into the prototype's sheet, its inner folds
   moving one flap each (Agent QA 1, 2).
+- It should place each fold line and fold type where Decisions 5 and 6
+  put them (Agent QA 3).
 
 **Agent QA**
 
@@ -291,14 +312,21 @@ type: plan
    `aspect` after the id; prototype)
 2. Do: `node --input-type=module -e 'import { HEART } from "./docs/src/designs/heart.js"; console.log(HEART.steps.map((step) => (step.kind === "fold" ? (step.layers.movedBy ?? "a") : "t")).join(" "));'`
    Expect: `a a a t a a a 2 1 a 2 1 t`
-3. Do: `node --check docs/src/designs/pencil.js && node --check docs/src/designs/heart.js`
+3. Do: `node --input-type=module -e 'import { HEART } from "./docs/src/designs/heart.js"; import { PENCIL } from "./docs/src/designs/pencil.js"; for (const design of [PENCIL, HEART]) console.log(design.id, design.steps.map((step) => (step.kind === "fold" ? [...step.from, ...step.to].map((v) => (v * 1000).toFixed(2)).join() + step.type[0] : "t")).join(" "));'`
+   Expect: `pencil -53.03,87.69,53.03,87.69v 53.03,-32.15,-53.03,-32.15v t 26.52,87.69,26.52,-32.15v -26.52,-32.15,-26.52,87.69v 0.00,87.69,26.52,41.77v -26.52,41.77,0.00,87.69v t`,
+   then `heart 106.07,-26.52,-106.07,-26.52v 79.55,53.03,0.00,-26.52v 0.00,-26.52,-79.55,53.03v t 53.03,79.55,53.03,26.52v -53.03,26.52,-53.03,79.55v 26.52,79.55,53.03,53.03v 0.00,53.03,26.52,79.55v -26.52,79.55,0.00,53.03v -53.03,53.03,-26.52,79.55v 0.00,66.29,53.03,66.29v -53.03,66.29,0.00,66.29v t`
+   (as Step 1's Agent QA 2: Decisions 5's and 6's tables)
+4. Do: `node --check docs/src/designs/pencil.js && node --check docs/src/designs/heart.js`
    Expect: prints nothing.
 
 ### Step 3: The list, and the buttons
 
 - Changes `docs/src/designs/list.js`: the four join `DESIGNS`
   (Decision 8).
-- Changes `docs/index.html`: the four buttons (Decision 8).
+- Changes `docs/index.html`: the four buttons (Decision 8), each a
+  `<button type="button">` like those before them.
+- Leaves `docs/src/main.js` as it is: the camera and the shadow camera
+  follow the new reach through `paperRadiusMeters` (Decision 9).
 - It should list the nine designs in button order (Agent QA 1).
 - It should set the camera by the heart's reach (Agent QA 1).
 - It should fold Mount Fuji from the coloured square, ending as a
@@ -397,9 +425,10 @@ hard-reload (Shift+Cmd+R). Keep the four sources in
      next design starts on the other side.
 9. **Do:** with "Fold lines" ticked, click "Pencil", then "Flat", and
    look closely at the lines on both sides; untick and tick the box.
-   - **Expect:** dashes as sharp as the square's, to the eye, on the
-     white side in the paper's colour and on the coloured side in
-     black. They fade out and in with the box.
+   - **Expect:** lines as sharp as the square's, to the eye: the
+     valley lines' dashes, and the mountain lines' dashes and small
+     dots, on the white side in the paper's colour and on the coloured
+     side in black. They fade out and in with the box.
    - **Why:** a 1:2 sheet has fewer pixels to the millimetre
      (Decision 10).
 10. **Do:** click "Paper Dart", "Paper Hat", "Watermelon", "Yacht" and
@@ -409,6 +438,18 @@ hard-reload (Shift+Cmd+R). Keep the four sources in
     the heart's lobes against their sources.
     - **Expect:** shapes that suit. Note the values, for `/done-plan`
       to record.
+    - **Why:** to retune, change the constant in the design's file and
+      hard-reload. Each has a safe range, given in its comment: keep
+      `SNOW_FRACTION` above 0 and under 1/3, `TIP_FRACTION` above 0 and
+      under 1, `STRIP_FRACTION` above 0 and under 1/2, and
+      `LOBE_FLAT_FRACTION` above 0 and at most 1. At 0, at the strip's
+      1/2 and past the lobes' 1, the page fails to load, with a "moves
+      nothing" or "T-junction" error in the console; past the strip's
+      1/2 the heart comes out lopsided; from the snow's 1/3 and the
+      tip's 1, the white cap covers the whole mountain, or the coloured
+      tip the whole white point. A
+      `POINT_HALF_ANGLE_RADIANS` under π / 6 lets the pencil's corner
+      flaps cross the other slope.
 12. **Do:** press Tab until "Heart" has the focus ring, and press
     Enter.
     - **Expect:** the same sequence as a click.
@@ -434,7 +475,7 @@ hard-reload (Shift+Cmd+R). Keep the four sources in
 - Every design is 2.2% smaller than before (Decision 9).
 - The row of buttons grows with each design, and is tidied once the
   designs are in
-  ([Ruling 5](./07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)).
+  ([Ruling 5](../todo/07-design-research.md#ruling-5-one-button-per-design-tidied-at-the-end)).
 
 ## Audit
 
@@ -454,3 +495,63 @@ hard-reload (Shift+Cmd+R). Keep the four sources in
   as Plan 10's uncommitted implementation leaves it, the Agent QA
   commands run on the prototype's designs in place of the files; no
   browser.
+- **2026-11-10T22:40:58Z** — **reviewed**: no major findings; the four
+  designs, rebuilt from their constants and cut by the engine as
+  committed at `85fbdf5`, give every Agent QA expectation and every
+  prototype size, area and reach, and the heart's steps 7 and 8, or 10
+  and 11, through `"all"` still throw "moves nothing"; at 400 samples
+  per step no overlapping faces share a layer or a plane, and every
+  crossing lies within 0.09 mm of a crease, as the dart's; no Three.js
+  API named, none to check; fixed: Context gives the re-run figures in
+  place of 0.06 mm, Decision 6 names `STRIP_FRACTION` and the
+  landmarks of steps 4 to 11, Decision 9 says 2.3% and that
+  `main.js` already computes the reach from `DESIGNS`, Step 3 leaves
+  `main.js` alone and names `type="button"`, Manual QA 9 describes
+  each kind of line.
+- **2026-11-10T22:45:13Z** — **implemented**: Steps 1 to 3; added
+  `docs/src/designs/mount-fuji.js`, `house.js`, `pencil.js` and
+  `heart.js`, each built from sheetSize() and its named constants;
+  changed `docs/src/designs/list.js` (four imports, four entries) and
+  `docs/index.html` (four buttons); `main.js` untouched; every Agent
+  QA command failed first for the missing modules, or gave the
+  "before" figures, then gave exactly its `Expect:`; every fold line,
+  printed in mm, matches the Decisions' tables; Manual QA walked
+  against the files and unchanged.
+- **2026-11-10T22:45:13Z** — **verified**: agent checks pass: 5
+  changed modules parse, no new line over 80 columns (the existing
+  `docs/index.html` lines 10 and 27 only), `/` and all 28 modules
+  under `docs/src/` served with status 200, vendored checksums match;
+  browser not run.
+- **2026-11-10T22:54:06Z** — **quality-checked**: Fixed: no fix-tier
+  finding; first-run polish of new code: the heart's
+  `LEFT_HALF_FOLD`/`RIGHT_HALF_FOLD` renamed `RIGHT_LOBE_FLAP_FOLD`
+  (2)/`LEFT_LOBE_FLAP_FOLD` (1), named by the lobe each flap lies under
+  after the turn-over, as steps 7 and 10 use them on the right lobe;
+  `FLAP_TOP_Y`'s comment says it equals `HALF_FOLD_X` only at
+  `STRIP_FRACTION` 1/4; the snow's and strip's comments paraphrase
+  their sources rather than quote them (checked against both pages);
+  `SNOW_FRACTION`, `TIP_FRACTION`, `STRIP_FRACTION` and
+  `LOBE_FLAT_FRACTION` comments give their safe ranges; plan: Steps 1
+  and 2 gain an Agent QA printing every fold line and type in mm
+  (mutants moving Mount Fuji's slope top or making the house's step 1
+  a valley passed every earlier Agent QA), Manual QA 11 gains the safe
+  ranges; Deferred: `docs/index.html:27`, the canvas `aria-label`,
+  89 columns, pre-existing, not this plan's to restyle; Verified fine:
+  every fold line matches the Decisions' tables; heart flap indices
+  match Decision 6; retuning sweep in a throwaway script (0 throws for
+  all four; snow reshapes to 1/3, then covers the mountain; tip to 1,
+  then no white point; strip to 1/2, which throws, lopsided past it,
+  each fold still on its own half from 0.1 to 0.4; lobe to 1, T-junction
+  past it; point angle under π / 6 adds faces); equivalent mutants:
+  `HALF_FOLD_X` written as `STRIP_Y + HALF_WIDTH` at 1/4,
+  `SIDE_FOOT_Y` anywhere on its upright line, `ASPECT` 0.5 for 1 / 2;
+  Three.js sweep: no scene, loop, resource, resize or API change, the
+  paper's geometry swap and disposal in `docs/src/scene/paper.js`
+  unchanged, camera and shadow reach from `paperRadiusMeters`; buttons
+  wired through `FOLD_TARGETS`, keyboard-reachable `<button>`s;
+  imports A-Z, file order, doc comments and `@fileoverview` credits to
+  CLAUDE.md; no new dependency; browser not run.
+- **2026-11-10T23:08:47Z** — **done**: Mount Fuji, the house, the pencil
+  and the heart behind four new buttons; the Lead Developer reports
+  every manual QA step passed, no value retuned; moved from
+  `plans/todo/`, links re-pointed both ways.

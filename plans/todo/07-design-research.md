@@ -250,7 +250,7 @@ Sources are in [Sources](#sources).
 - 8: white snow cap on a coloured mountain. Its step photos show the
   source creasing the middle, folding the corners of one half, then
   re-creasing the middle so that the model stands.
-  [Plan 11](./11-fuji-house-pencil-heart.md#decisions) folds the middle
+  [Plan 11](../done/11-fuji-house-pencil-heart.md#decisions) folds the middle
   first, so that the flat model shows only the mountain. The page is
   `http` only.
 - 10: the two-colour version folds one layer behind, for a coloured face
@@ -285,7 +285,7 @@ Sources are in [Sources](#sources).
 - 22: the photo shows a coloured body, a white band and a coloured tip.
   Its steps are in a video, which was not watched, and no written copy
   was found.
-  [Plan 11](./11-fuji-house-pencil-heart.md#decisions) folds a pencil of
+  [Plan 11](../done/11-fuji-house-pencil-heart.md#decisions) folds a pencil of
   that look by a sequence worked out in this repo, six folds and two
   turn-overs.
 
@@ -365,7 +365,7 @@ them:
 - [Plan 10](../done/10-start-the-sheet-turned.md): the starting pose, proved
   by the yacht, which starts white side up, and the ice-cream cone,
   which starts as a white diamond.
-- [Plan 11](./11-fuji-house-pencil-heart.md): Mount Fuji, the house,
+- [Plan 11](../done/11-fuji-house-pencil-heart.md): Mount Fuji, the house,
   a pencil and the heart, designs 8, 16, 22 and 21, the last two from
   1:2 sheets, with no engine work.
 
