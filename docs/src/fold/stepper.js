@@ -2,11 +2,11 @@
  * @fileoverview
  * Moves the sequence position through a design's steps, folds and
  * turn-overs, one step at a time, towards a target, by way of the flat
- * sheet stretching and turning to its starting pose when the target names
- * another design, and fades the printed fold lines in and out.
+ * sheet stretching and turning to its starting pose and lean when the
+ * target names another design, and fades the printed fold lines in and out.
  */
 
-import { startOf } from "../designs/sheet.js";
+import { leanOf, startOf } from "../designs/sheet.js";
 
 export const FADE_IN_SECONDS = 0.6; // the fold lines, from hidden to shown
 export const FADE_OUT_SECONDS = 0.3; // the fold lines, from shown to hidden
@@ -28,10 +28,15 @@ export const UNFOLD_SECONDS = 0.35; // one step, backwards: twice as fast
  *   showing, then the target's design takes over: `stretchFromId` takes
  *   the old `designId`, and `stretchProgress` runs from 0 to 1 in
  *   `STRETCH_SECONDS`, or is 1 at once when the two designs share their
- *   aspect and their starting pose, its roll and its side. Once it
- *   reaches 1, the lines fade towards `linesOn`, then folding starts.
+ *   aspect, their starting pose, its roll and its side, and their lean.
+ *   Once it reaches 1, the lines fade towards `linesOn`, then folding
+ *   starts.
  * - A target `designId` of null means flat, keeping the sheet showing;
  *   once the paper is flat, the lines fade out, if showing.
+ * - At rest at the design's finished position, its step count, the lines
+ *   fade out, if showing, so the finished model shows none. When the
+ *   target leaves it, the lines fade towards `linesOn` before unfolding
+ *   starts, so the paper unfolds showing them if they are switched on.
  * - At rest at any other position, the lines fade towards `linesOn`.
  * - `linesVisibility` moves linearly in time, over `FADE_IN_SECONDS` in
  *   and `FADE_OUT_SECONDS` out; the renderer eases it. With the lines off
@@ -40,8 +45,8 @@ export const UNFOLD_SECONDS = 0.35; // one step, backwards: twice as fast
  * - Allocates nothing, so it is safe on the per-frame path.
  * - Pure maths, with no DOM or GPU access.
  * @param deltaSeconds The time elapsed since the last frame, in seconds.
- * @param designs The designs, keyed by `id`, each with its `aspect` and
- *   an optional `start`.
+ * @param designs The designs, keyed by `id`, each with its `aspect`, an
+ *   optional `leanRadians`, an optional `start` and its `steps`.
  * @param state The sequence state, mutated: `designId`; `direction`, 1
  *   while folding, −1 while unfolding and 0 at rest, stretching or
  *   fading; `linesFade`, 1 while the lines fade in, −1 while they fade
@@ -103,12 +108,21 @@ export const stepSequence = (deltaSeconds, designs, state, target) => {
         target.designId !== null && target.designId !== state.designId;
       const targetPosition = isSwitching ? 0 : target.position;
 
-      // Flat paper leaving its design, for another or for "Flat", shows no
-      // lines; at 0 before folding, or at rest, they follow the checkbox.
-      if (state.position === 0 || state.position === targetPosition) {
+      // The finished model at rest, and flat paper leaving its design, for
+      // another or for "Flat", show no lines; at 0 before folding, at the
+      // finished position before unfolding, or at rest, they follow the
+      // checkbox.
+      const isFinished =
+        state.position === designs[state.designId].steps.length;
+      if (
+        isFinished ||
+        state.position === 0 ||
+        state.position === targetPosition
+      ) {
+        const isDone = isFinished && state.position === targetPosition;
         const isLeaving =
           state.position === 0 && (isSwitching || target.designId === null);
-        const linesWanted = !isLeaving && target.linesOn ? 1 : 0;
+        const linesWanted = !isDone && !isLeaving && target.linesOn ? 1 : 0;
         if (state.linesVisibility !== linesWanted) {
           state.direction = 0;
           state.linesFade = Math.sign(linesWanted - state.linesVisibility);
@@ -157,12 +171,13 @@ export const stepSequence = (deltaSeconds, designs, state, target) => {
 };
 
 /** #### Returns true if two designs' flat sheets look the same
- * - The same `aspect`, roll and side, so no stretch or turn is needed
+ * - The same `aspect`, roll, side and lean, so no stretch or turn is needed
  *   between them.
  * - Allocates nothing, so it is safe on the per-frame path.
- * @param first One design, with its `aspect` and an optional `start`.
+ * @param first One design, with its `aspect`, an optional `leanRadians`
+ *   and an optional `start`.
  * @param second The other design, likewise.
- * @returns True if the two share their shape and starting pose.
+ * @returns True if the two share their shape, starting pose and lean.
  */
 const sharesSheet = (first, second) => {
   const firstStart = startOf(first);
@@ -171,6 +186,7 @@ const sharesSheet = (first, second) => {
   return (
     first.aspect === second.aspect &&
     firstStart.rollRadians === secondStart.rollRadians &&
-    firstStart.side === secondStart.side
+    firstStart.side === secondStart.side &&
+    leanOf(first) === leanOf(second)
   );
 };

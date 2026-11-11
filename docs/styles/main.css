@@ -8,8 +8,16 @@
  */
 
 :root {
+  /* the toolbar's fade, as long as `PAPER_COLOR_FADE_SECONDS`, the paper's */
+  --controls-fade-duration: 0.3s;
   --controls-gap: 0.5rem; /* between neighbouring controls, and swatches */
   --controls-offset: 1.5rem; /* from the viewport's bottom edge */
+  --design-border-width: 1px; /* the thin border round each design */
+  /* a design's background on hover: a faint tint of the text colour */
+  --design-hover-color: color-mix(in srgb, CanvasText 10%, transparent);
+  --design-hover-duration: 0.15s; /* the background's fade on hover */
+  --design-padding: 0.25rem 0.75rem; /* between a design's border and text */
+  --design-radius: 0.375rem; /* each design's rounded corners */
   --fold-lines-gap: 0.25rem; /* between the checkbox and its text */
   --swatch-ring-gap: 2px; /* page colour between a swatch and its ring */
   --swatch-ring-width: 2px; /* the ring round the chosen swatch */
@@ -42,13 +50,13 @@ body {
   user-select: none;
 }
 
-.scene:active {
+/*
+ * Set by src/input/drag.js while a drag holds the pointer. That module
+ * cancels the press's default, to keep focus where it was, which in Firefox
+ * also stops the canvas's active state, so the cursor follows this instead.
+ */
+.scene[data-dragging] {
   cursor: grabbing;
-}
-
-/* Positioned, and later in the document, so it paints over the canvas. */
-h1 {
-  position: relative;
 }
 
 /* Fixed, and later in the document, so it paints over the canvas. */
@@ -60,16 +68,74 @@ h1 {
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--controls-gap);
+  transition: opacity var(--controls-fade-duration);
 }
 
-/* The fold-lines checkbox sits beside the buttons, centred on their line. */
-.controls label {
+/*
+ * Hidden by Escape, for a presentation mode, in src/ui/controls-toggle.js:
+ * transparent, and passed through by the pointer to the canvas, but still
+ * within keyboard reach, which `visibility`, `display` or `inert` would end.
+ */
+.controls[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/*
+ * The fold-lines checkbox sits beside the designs, centred on their line.
+ * Only the bar's own label: the designs' labels sit within `.designs`.
+ */
+.controls > label {
   display: inline-flex;
   align-items: center;
   gap: var(--fold-lines-gap);
 }
 
-/* The swatches come last in the bar, centred on the buttons' line. */
+/* The designs come first in the bar, wrapping as a group on a narrow one. */
+.designs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--controls-gap);
+}
+
+/*
+ * Each design is a radio input inside its label, which is drawn as a plain
+ * button: no fill, a thin border and rounded corners, in the text colour,
+ * with a faint tint of it fading in on hover.
+ */
+.designs label {
+  position: relative;
+  padding: var(--design-padding);
+  border: var(--design-border-width) solid CanvasText;
+  border-radius: var(--design-radius);
+  cursor: pointer;
+  transition: background-color var(--design-hover-duration);
+}
+
+.designs label:hover {
+  background-color: var(--design-hover-color);
+}
+
+/*
+ * Hidden but still focusable, so Tab and the arrow keys reach it: never
+ * `display: none` or `visibility: hidden`, since the arrow keys skip a
+ * radio that cannot take focus. The pointer passes through it to the
+ * label, which checks it on a click.
+ */
+.designs input {
+  position: absolute;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The browser's own focus ring, round the label of the focused design. */
+.designs label:has(:focus-visible) {
+  outline: auto;
+}
+
+/* The swatches come last in the bar, centred on the designs' line. */
 .paper-colors {
   display: flex;
   align-items: center;
@@ -91,10 +157,13 @@ h1 {
 }
 
 /*
- * The chosen swatch's ring is a box-shadow, a gap of page colour inside a
- * ring of text colour. An outline here would override the browser's own
- * focus ring, and focus lands on the chosen swatch.
+ * The chosen design's and the chosen swatch's ring is a box-shadow, a gap
+ * of page colour inside a ring of text colour, which follows a design's
+ * rounded corners. An outline here would override the browser's own focus
+ * ring, and focus lands on the chosen radio. Scoped to the two groups: the
+ * "Fold lines" checkbox is `:checked` while ticked.
  */
+.designs label:has(:checked),
 .paper-colors input:checked {
   box-shadow:
     0 0 0 var(--swatch-ring-gap) Canvas,

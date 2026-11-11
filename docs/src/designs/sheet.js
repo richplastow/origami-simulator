@@ -1,8 +1,9 @@
 /**
  * @fileoverview
- * The sheet a design folds from: its size, set by its shape, and its
- * starting pose, set by its roll and the side towards the viewer; and the
- * stretch and turn from one design's sheet to another's.
+ * The sheet a design folds from: its size, set by its shape; its starting
+ * pose, set by its roll and the side towards the viewer; and its lean, which
+ * turns the whole design; and the stretch and turn from one design's sheet
+ * to another's.
  */
 
 import { smoothstep } from "../fold/easing.js";
@@ -25,6 +26,17 @@ export const SHEET_AREA_SQUARE_METERS = 0.0225;
 // cutSheet() rejects any other at load.
 const SIDE_RADIANS = Object.freeze({ back: -Math.PI, front: 0 });
 
+/** #### Returns a design's lean, or 0 if it gives none
+ * - The lean turns the whole design, from its flat sheet to its finished
+ *   model, anticlockwise as the viewer sees it, in radians. Unlike the
+ *   start's roll, it turns the fold lines with the sheet, so it changes
+ *   how the design sits on screen, not the model it makes.
+ * - Allocates nothing, so it is safe on the per-frame path.
+ * @param design The design, with an optional `leanRadians`.
+ * @returns The design's `leanRadians`, or 0, in radians.
+ */
+export const leanOf = (design) => design.leanRadians ?? 0;
+
 /** #### Returns the width and height of a sheet of the standard area
  * - Pure maths, with no DOM or GPU access.
  * @param aspect The sheet's width divided by its height.
@@ -43,6 +55,29 @@ export const sheetSize = (aspect) => {
  *   radians, and `side`, `"front"` or `"back"`.
  */
 export const startOf = (design) => design.start ?? DEFAULT_START;
+
+/** #### Writes the lean that turns the old design's lean into the new one's
+ * - Eases the lean, `z`, from the old design's to the new one's, by the
+ *   stretch's eased progress, as writeStartPose() eases the start; it is
+ *   exactly the new design's lean once the stretch is done.
+ * - `z` is anticlockwise as the viewer sees it, in radians.
+ * - Allocates nothing, so it is safe on the per-frame path.
+ * - Pure maths, with no DOM or GPU access.
+ * @param designs The designs, keyed by `id`, each with an optional
+ *   `leanRadians`.
+ * @param rotation The object to write `z` to, such as a group's
+ *   `rotation`.
+ * @param state The sequence state: `designId`, `stretchFromId` and
+ *   `stretchProgress`, from 0 to 1.
+ */
+export const writeLean = (designs, rotation, state) => {
+  const from = leanOf(designs[state.stretchFromId]);
+  const to = leanOf(designs[state.designId]);
+
+  // Mixed as `from × (1 − p) + to × p`, which gives `to` exactly at p = 1.
+  const p = smoothstep(state.stretchProgress);
+  rotation.z = from * (1 - p) + to * p;
+};
 
 /** #### Writes the turn that takes the flat sheet from the old pose to the new
  * - Eases the side's turn, `y`, and the roll, `z`, together, from the old

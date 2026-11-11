@@ -1,27 +1,24 @@
 import { HEART } from "./heart.js";
-import { HOUSE } from "./house.js";
-import { ICE_CREAM } from "./ice-cream.js";
 import { MOUNT_FUJI } from "./mount-fuji.js";
 import { PAPER_DART } from "./paper-dart.js";
-import { PAPER_HAT } from "./paper-hat.js";
 import { PENCIL } from "./pencil.js";
-import { WATERMELON } from "./watermelon.js";
 import { YACHT } from "./yacht.js";
 
-/** #### Every design, in the order of their buttons on the page
- * - `main.js` cuts each design's sheet from it, and starts with the first;
- *   `fold-buttons.js` builds each button's target from it. A new design is
- *   its file, a line here and a `<button>` in `index.html`.
+/** #### Every design the page offers, in the order of their radios
+ * - `main.js` cuts each design's sheet from it, and starts with the first,
+ *   finished, in its colour; `design-radios.js` builds each radio's target
+ *   and colour from it. A new design is its file, a line here and an
+ *   `<input type="radio" name="design">` in its `<label>` in `index.html`.
+ * - Each design may name its paper colour as `colorId`, an id in
+ *   `PAPER_COLORS`, which choosing it fades the front to; one that names
+ *   none leaves the colour as it is.
+ * - Design files not imported here are kept but not loaded.
  * - Frozen: copy it rather than change it.
  */
 export const DESIGNS = Object.freeze([
-  PAPER_DART,
-  PAPER_HAT,
-  WATERMELON,
-  YACHT,
-  ICE_CREAM,
-  MOUNT_FUJI,
-  HOUSE,
   PENCIL,
+  MOUNT_FUJI,
+  YACHT,
+  PAPER_DART,
   HEART,
 ]);

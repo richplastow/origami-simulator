@@ -53,6 +53,7 @@ const SLOPE_TOP_RIGHT = [HALF_WIDTH - PACKET_HEIGHT, SNOW_Y];
  */
 export const MOUNT_FUJI = Object.freeze({
   aspect: ASPECT,
+  colorId: "green",
   id: "mount-fuji",
   steps: Object.freeze([
     createFold([-HALF_WIDTH, SNOW_Y], "all", [HALF_WIDTH, SNOW_Y], "valley"),

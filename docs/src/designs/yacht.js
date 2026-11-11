@@ -43,19 +43,31 @@ const SAIL_FOOT = [
 ];
 const TOP_RIGHT = [HALF_WIDTH, HALF_HEIGHT];
 
+// The hull's line rises to the left, from `HULL_RIGHT` to `SAIL_CORNER`, so
+// the whole yacht leans anticlockwise by its slope, about 14.50°, which sets
+// the hull's bottom edge level, and keeps it level if `HULL_RISE_FRACTION`
+// is retuned. In radians.
+const LEAN_RADIANS = Math.atan2(
+  SAIL_CORNER[1] - HULL_RIGHT[1],
+  HULL_RIGHT[0] - SAIL_CORNER[0],
+);
+
 /** #### The yacht: a square sheet, white side up, and the three folds
  * - Each fold's line runs `from` → `to` in the view frame, as the viewer
  *   sees the paper at that step, in metres, and the side to its left, as
  *   the viewer sees it, moves.
- * - Starts white side up, not rolled. Step 0 folds the top left corner
- *   down to the bottom right, along the diagonal; step 1 folds the top
- *   layer's upright edge over to the diagonal, as a white sail; step 2
+ * - Starts white side up, not rolled, and leans by the hull's slope, so
+ *   the finished hull's bottom edge is level. Step 0 folds the top left
+ *   corner down to the bottom right, along the diagonal; step 1 folds the
+ *   top layer's upright edge over to the diagonal, as a white sail; step 2
  *   folds the bottom up as the hull.
  * - Frozen: copy it rather than change it.
  */
 export const YACHT = Object.freeze({
   aspect: ASPECT,
+  colorId: "blue",
   id: "yacht",
+  leanRadians: LEAN_RADIANS,
   start: Object.freeze({ rollRadians: 0, side: "back" }),
   steps: Object.freeze([
     createFold(BOTTOM_LEFT, "all", TOP_RIGHT, "valley"),

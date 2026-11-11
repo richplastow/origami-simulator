@@ -56,14 +56,16 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   unlit, and its lines are black already.
  * - The bounding sphere is set once per geometry, to hold the paper over
  *   its whole fold sequence.
- * - The meshes sit in four nested groups: `group`, outermost, which the
- *   drag spins; `turnGroup`, within it, which turns the paper over about
- *   its upright axis; `startGroup`, within that, which turns the sheet to
- *   its design's starting pose, its side about its upright axis and then
- *   its roll about the line of sight; and `stretchGroup`, innermost, whose
- *   scale stretches the flat sheet between two designs' shapes. Each
- *   group's transform is then free for its own job, and the pose, outside
- *   the stretch, turns a part-stretched sheet without shearing it.
+ * - The meshes sit in five nested groups: `group`, outermost, which the
+ *   drag spins; `leanGroup`, within it, which leans the whole design about
+ *   the line of sight; `turnGroup`, within that, which turns the paper over
+ *   about the design's own upright axis, leaned with it; `startGroup`,
+ *   within that, which turns the sheet to its design's starting pose, its
+ *   side about its upright axis and then its roll about the line of sight;
+ *   and `stretchGroup`, innermost, whose scale stretches the flat sheet
+ *   between two designs' shapes. Each group's transform is then free for
+ *   its own job, and the pose, outside the stretch, turns a part-stretched
+ *   sheet without shearing it.
  * - The front's colour fades from the one showing to another through two
  *   scratch colours, mixed in Three.js's working colour space, and the
  *   back's lines follow it; the back's colour never changes.
@@ -78,7 +80,8 @@ const PAPER_BACK_COLOR = 0xf4f1ea; // off-white, whatever the front's colour
  *   reaches over every design's fold sequence, from maxPaperRadius(), in
  *   metres.
  * @param sheet The sheet that cutSheet() returns.
- * @returns The `group` to add to the scene; `startRotation`,
+ * @returns The `group` to add to the scene; `leanRotation`,
+ *   `leanGroup`'s `rotation`, for writeLean(); `startRotation`,
  *   `startGroup`'s `rotation`, for writeStartPose(); `stretchScale`, the
  *   inner group's `scale`, for writeStretchScale(); fitGrain(), which fits
  *   the grain to the sheet's size and stretch, to call after each
@@ -149,8 +152,13 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   startGroup.add(stretchGroup);
   const turnGroup = new Group();
   turnGroup.add(startGroup);
+
+  // Outside `turnGroup`, so a turn-over turns the paper about the design's
+  // own upright axis, leaned, rather than the screen's.
+  const leanGroup = new Group();
+  leanGroup.add(turnGroup);
   const group = new Group();
-  group.add(turnGroup);
+  group.add(leanGroup);
 
   // The front colour fade's start and end, created once and reused. Both
   // start as the front's colour, so a fade before the first start changes
@@ -271,6 +279,7 @@ export const createPaper = (frontColor, radiusMeters, sheet) => {
   return {
     fitGrain,
     group,
+    leanRotation: leanGroup.rotation,
     setFrontColorFade,
     setLinesVisibility,
     setSequencePosition,

@@ -12,6 +12,10 @@ import { createFold, TURN_OVER } from "./steps.js";
 
 const ASPECT = 1 / 2; // a half square, stood upright
 
+// The whole pencil leans anticlockwise by 135°, so its point, upright in its
+// own frame, points down and to the left. In radians.
+const LEAN_RADIANS = (3 * Math.PI) / 4;
+
 // Each side of the point slopes this far from upright: the sharpest point
 // whose corner flaps stay hidden, since each corner's top edge then lies
 // exactly along the other slope. The photos show about 24°.
@@ -51,7 +55,8 @@ const APEX = [0, TIP_Y];
  * - Each fold's line runs `from` → `to` in the view frame, as the viewer
  *   sees the paper at that step, in metres, and the side to its left, as
  *   the viewer sees it, moves.
- * - Starts white side up, not rolled. Step 0 folds the top edge down as
+ * - Starts white side up, not rolled, and leans by 135°, so the finished
+ *   pencil points down and to the left. Step 0 folds the top edge down as
  *   the tip's colour; step 1 folds the bottom edge up as the body; step 2
  *   turns the paper over; steps 3 and 4 fold the right, then the left,
  *   side in to the middle; steps 5 and 6 fold the top right, then the top
@@ -61,7 +66,9 @@ const APEX = [0, TIP_Y];
  */
 export const PENCIL = Object.freeze({
   aspect: ASPECT,
+  colorId: "red",
   id: "pencil",
+  leanRadians: LEAN_RADIANS,
   start: Object.freeze({ rollRadians: 0, side: "back" }),
   steps: Object.freeze([
     createFold([-HALF_WIDTH, TIP_Y], "all", [HALF_WIDTH, TIP_Y], "valley"),

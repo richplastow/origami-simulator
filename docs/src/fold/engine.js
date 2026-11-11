@@ -3,7 +3,7 @@
  * Cuts a design's sheet into the faces its folds make, once, at load.
  */
 
-import { sheetSize, startOf } from "../designs/sheet.js";
+import { leanOf, sheetSize, startOf } from "../designs/sheet.js";
 
 const IDENTITY_PLACEMENT = Object.freeze([1, 0, 0, 1, 0, 0]);
 
@@ -47,7 +47,10 @@ const TOLERANCE_METERS = 1e-9;
  *   several.
  * - Throws, naming the design, before any fold runs, when its `start` has
  *   a `side` other than `"front"` or `"back"`, or a `rollRadians` that is
- *   not a finite number, as startFrame() sets out.
+ *   not a finite number, as startFrame() sets out; and when its
+ *   `leanRadians` is given but is not a finite number, so writeLean() and
+ *   sharesSheet(), which read the lean on the per-frame path, never meet
+ *   one.
  * - Throws, naming the design and a step by its index in `steps`, before
  *   any fold runs, when a step's `kind` is unknown and when a fold's
  *   `layers` name a step that is not a fold; and, as the folds run, when a
@@ -55,7 +58,8 @@ const TOLERANCE_METERS = 1e-9;
  *   followed by a fold that moves its faces. Throws, naming the design,
  *   when the final faces leave a T-junction.
  * - Pure maths, with no DOM or GPU access.
- * @param design The design: `aspect`; `id`; an optional `start`, its
+ * @param design The design: `aspect`; `id`; an optional `leanRadians`,
+ *   as leanOf() reads it, which cuts nothing; an optional `start`, its
  *   starting pose, as startOf() reads it; and `steps`, each a fold, in the
  *   view frame, or a turn-over.
  * @returns The sheet: `bridges`; `centres`, one per stage from 0 (flat) to
@@ -67,6 +71,10 @@ const TOLERANCE_METERS = 1e-9;
  */
 export const cutSheet = (design) => {
   const { id } = design;
+  const leanRadians = leanOf(design);
+  if (!Number.isFinite(leanRadians)) {
+    throw new Error(`Design "${id}" leans by ${leanRadians} radians`);
+  }
   const frame = startFrame(design);
   const { folds, stepIndices, steps } = readSteps(design, frame);
   const { heightMeters, widthMeters } = sheetSize(design.aspect);

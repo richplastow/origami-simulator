@@ -84,6 +84,7 @@ const LOBE_FLAT_Y =
  */
 export const HEART = Object.freeze({
   aspect: ASPECT,
+  colorId: "pink",
   id: "heart",
   start: Object.freeze({ rollRadians: 0, side: "back" }),
   steps: Object.freeze([

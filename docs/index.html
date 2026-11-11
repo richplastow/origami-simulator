@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Origami Simulator</title>
+    <title>Pureland Simulator</title>
     <link
       rel="icon"
       type="image/png"
@@ -26,18 +26,33 @@
       role="img"
       aria-label="A sheet of origami paper, which folds into simple designs and turns when dragged"
     ></canvas>
-    <h1>Origami Simulator</h1>
     <div class="controls">
-      <button type="button" data-fold="flat">Flat</button>
-      <button type="button" data-fold="paper-dart">Paper Dart</button>
-      <button type="button" data-fold="paper-hat">Paper Hat</button>
-      <button type="button" data-fold="watermelon">Watermelon</button>
-      <button type="button" data-fold="yacht">Yacht</button>
-      <button type="button" data-fold="ice-cream">Ice Cream</button>
-      <button type="button" data-fold="mount-fuji">Mount Fuji</button>
-      <button type="button" data-fold="house">House</button>
-      <button type="button" data-fold="pencil">Pencil</button>
-      <button type="button" data-fold="heart">Heart</button>
+      <div class="designs" role="radiogroup" aria-label="Design">
+        <label>
+          <input type="radio" name="design" value="pencil" checked />
+          Pencil
+        </label>
+        <label>
+          <input type="radio" name="design" value="mount-fuji" />
+          Mount Fuji
+        </label>
+        <label>
+          <input type="radio" name="design" value="flat" />
+          Flat
+        </label>
+        <label>
+          <input type="radio" name="design" value="yacht" />
+          Yacht
+        </label>
+        <label>
+          <input type="radio" name="design" value="paper-dart" />
+          Paper Dart
+        </label>
+        <label>
+          <input type="radio" name="design" value="heart" />
+          Heart
+        </label>
+      </div>
       <label>
         <input type="checkbox" checked data-fold-lines />
         Fold lines
@@ -53,12 +68,6 @@
         <input
           type="radio"
           name="paper-color"
-          value="yellow"
-          aria-label="Yellow"
-        />
-        <input
-          type="radio"
-          name="paper-color"
           value="green"
           aria-label="Green"
         />
@@ -67,6 +76,12 @@
           name="paper-color"
           value="blue"
           aria-label="Blue"
+        />
+        <input
+          type="radio"
+          name="paper-color"
+          value="orange"
+          aria-label="Orange"
         />
         <input
           type="radio"

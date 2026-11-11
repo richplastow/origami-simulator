@@ -31,6 +31,7 @@ const APEX = [0, heightMeters / 2];
  */
 export const PAPER_DART = Object.freeze({
   aspect: ASPECT,
+  colorId: "orange",
   id: "paper-dart",
   steps: Object.freeze([
     createFold(rimPoint(-CORNER_LINE_RADIANS), "all", APEX, "valley"),
